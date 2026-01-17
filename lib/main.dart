@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
-import 'presentation/screens/home_screen.dart'; // 👈 استدعاء الرئيسية مباشرة
+import 'presentation/screens/home_screen.dart'; // 馃憟 丕賱亘丿丕賷丞 丕賱氐丨賷丨丞
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,12 +15,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Movies App', // الاسم الذي يظهر في التبويب
+      title: 'Movies App',
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: Colors.black,
-        colorScheme: const ColorScheme.dark(primary: Colors.red), // لون أحمر مثل نتفليكس
+        colorScheme: const ColorScheme.dark(primary: Colors.amber),
       ),
-      // 🔥 بما أن الـ HTML قام بمهمة السبلاش، فلاتر يبدأ مباشرة بالرئيسية
+      // 馃敟 丕賱丌賳 丕賱鬲胤亘賷賯 賷亘丿兀 賲賳 丕賱乇卅賷爻賷丞 (賵丕賱爻亘賱丕卮 賷鬲賲 賮賷 HTML)
       home: const HomeScreen(),
     );
   }
