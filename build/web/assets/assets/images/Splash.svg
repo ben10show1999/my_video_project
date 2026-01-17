@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Logo Animation</title>
+</head>
+
+<body bgcolor="#000000" leftmargin="0" topmargin="0" rightmargin="0" bottommargin="0" marginwidth="0" marginheight="0" scroll="no">
+
+<svg xmlns="http://www.w3.org/2000/svg" 
+     viewBox="0 0 100 100" 
+     width="100%" 
+     height="90vh" 
+     preserveAspectRatio="xMidYMid meet">
+
+  <rect x="-1000" y="-1000" width="3000" height="3000" fill="#000000" />
+
+  <g transform="translate(50, 55)">
+    
+    <circle r="15" 
+            fill="none" 
+            stroke="#ffffff" 
+            stroke-width="12" 
+            stroke-linecap="butt" 
+            stroke-dasharray="70 95" 
+            stroke-dashoffset="0">
+
+      <animate attributeName="opacity" 
+               values="0; 1; 1; 0" 
+               keyTimes="0; 0.125; 0.875; 1" 
+               dur="4s" 
+               repeatCount="indefinite" 
+               calcMode="linear" />
+
+      <animateTransform attributeName="transform" 
+                        type="rotate" 
+                        values="45 0 0; 45 0 0; 405 0 0; 405 0 0" 
+                        keyTimes="0; 0.375; 0.625; 1" 
+                        dur="4s" 
+                        repeatCount="indefinite" 
+                        calcMode="spline" 
+                        keySplines="0 0 0 0; 0.4 0 0.2 1; 0 0 0 0" />
+    </circle>
+  </g>
+</svg>
+
+</body>
+</html>
