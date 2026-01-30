@@ -1,0 +1,18 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../core/logic/app_provider.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/components/universal_image.dart';
+import '../details/movie_details_screen.dart';
+
+class NotificationsScreen extends StatelessWidget {
+  const NotificationsScreen({super.key});
+  @override Widget build(BuildContext context) {
+    final manager = Provider.of<AppProvider>(context);
+    if (!manager.notificationsEnabled) {
+      return Scaffold(backgroundColor: AppColors.background, appBar: AppBar(title: const Text("Notifications"), backgroundColor: Colors.transparent), body: const Center(child: Text("Notifications are disabled in Settings", style: TextStyle(color: Colors.grey))));
+    }
+    final list = manager.notifications;
+    return Scaffold(backgroundColor: AppColors.background, appBar: AppBar(title: const Text("Notifications"), backgroundColor: Colors.transparent), body: list.isEmpty ? const Center(child: Text("No notifications", style: TextStyle(color: Colors.grey))) : ListView.separated(padding: const EdgeInsets.all(16), itemCount: list.length, separatorBuilder: (_,__) => const Divider(color: Colors.white10), itemBuilder: (c, i) { final n = list[i]; return ListTile(onTap: () { if (n.payload != null) Navigator.push(context, MaterialPageRoute(builder: (_) => const MovieDetailsScreen())); }, contentPadding: EdgeInsets.zero, leading: SizedBox(width: 50, height: 75, child: ClipRRect(borderRadius: BorderRadius.circular(8), child: n.imageUrl != null ? UniversalImage(path: n.imageUrl!, fit: BoxFit.cover) : Container(color: Colors.white10, child: const Icon(Icons.notifications, color: AppColors.primary)))), title: Text(n.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), subtitle: Text(n.body, style: const TextStyle(color: Colors.grey), maxLines: 2, overflow: TextOverflow.ellipsis), trailing: Text(n.time, style: const TextStyle(color: Colors.grey, fontSize: 10))); }));
+  }
+}

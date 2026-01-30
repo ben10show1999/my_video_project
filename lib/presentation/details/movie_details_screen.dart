@@ -1,0 +1,92 @@
+import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_styles.dart';
+import '../../core/utils/security_utils.dart';
+import '../../core/logic/app_provider.dart';
+import '../../data/models/movie_models.dart';
+import '../components/buttons/action_icon_button.dart';
+import '../components/player/smart_media_kit_player.dart';
+import 'components/playlist_sidebar.dart';
+import 'components/lazy_horizontal_section.dart';
+
+class MovieDetailsScreen extends StatefulWidget { const MovieDetailsScreen({super.key}); @override State<MovieDetailsScreen> createState() => _MovieDetailsScreenState(); }
+class _MovieDetailsScreenState extends State<MovieDetailsScreen> { late ScrollController _sc; late MovieModel _mov; late SeasonModel _sea; late EpisodeModel _ep; 
+  
+  // �7�3 TASK 6: Desktop Fluid State
+  double _currentAspectRatio = 16/9; 
+
+  @override void initState() { super.initState(); _sc = ScrollController(); _data(); } 
+  
+  void _data() { 
+    String url1 = "https://user-images.githubusercontent.com/28053651/202696586-48e7996a-7485-414f-8484-a5416297ea42.mp4";
+    String url2 = "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4"; 
+    
+    _mov = MovieModel(id: 1, title: "Flutter Mastery", overview: "An epic journey into Dart & Flutter.\n\nThis course covers everything from basics to advanced topics. Learn how to build scalable apps, handle state management, and optimize performance.", posterPath: "", seasons: [
+      SeasonModel(id: "s1", title: "Season 1", episodes: List.generate(5, (i) => EpisodeModel(id: "s1e$i", title: "S1 Ep ${i+1}", duration: "24:00", seasonNumber: 1, episodeNumber: i+1, sources: [VideoQualityModel(quality: "1080p", urls: [url1, url1])]))),
+      SeasonModel(id: "s2", title: "Season 2", episodes: List.generate(5, (i) => EpisodeModel(id: "s2e$i", title: "S2 Ep ${i+1}", duration: "30:00", seasonNumber: 2, episodeNumber: i+1, sources: [VideoQualityModel(quality: "1080p", urls: [url2])]))),
+    ]); 
+    _sea = _mov.seasons.first; _ep = _sea.episodes.first; 
+  }
+
+  void _reportIssue() async { final Uri emailLaunchUri = Uri(scheme: 'mailto', path: 'support@myapp.com', query: 'subject=Report Issue: ${_mov.title}&body=Episode: ${_ep.title}\nDescription: '); if (await canLaunchUrl(emailLaunchUri)) launchUrl(emailLaunchUri); } void _shareContent() { String link = SecurityUtils.generateDeepLink(_ep.id); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Link copied: $link"))); } void _remindMe() { Provider.of<AppProvider>(context, listen: false).scheduleReminder(_mov.title); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Reminder set!"))); }
+  
+  @override Widget build(BuildContext context) { return Scaffold(backgroundColor: AppColors.background, body: LayoutBuilder(builder: (c, cs) => cs.maxWidth > 900 ? _desk() : _mob())); }
+  
+  Widget _mob() => SingleChildScrollView(controller: _sc, child: Column(children: [SmartMediaKitPlayer(sources: _ep.sources, thumbnailUrl: _ep.thumbnailUrl), Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [_info(true), const SizedBox(height: 24), _over(), const Divider(color: Colors.white10, height: 48), const Text("Episodes", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)), const SizedBox(height: 12), PlaylistSidebar(seasons: _mov.seasons, currentSeason: _sea, currentEpisode: _ep, onSeasonChanged: (s) => setState(() => _sea = s), onEpisodeTap: (e) => setState(() => _ep = e), isLoadingMore: false, onLoadMore: (){}), const SizedBox(height: 32), _recs()]))]));
+  
+  // �7�3 TASK 6: Fluid Desktop Layout Logic
+  Widget _desk() {
+    // Calculate Flex based on Aspect Ratio
+    int playerFlex = _currentAspectRatio >= 1.7 ? 7 : 6;
+    int sideFlex = 10 - playerFlex;
+
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              // LEFT COLUMN: Player + Info
+              Expanded(flex: playerFlex, child: Column(children: [
+                SmartMediaKitPlayer(
+                  sources: _ep.sources, 
+                  initialAspectRatio: _currentAspectRatio,
+                  onAspectRatioChanged: (r) => setState(() => _currentAspectRatio = r),
+                ), 
+                const SizedBox(height: 20), 
+                _info(false)
+              ])), 
+              
+              const SizedBox(width: 24), 
+              
+              // RIGHT COLUMN: Ad + Playlist + Overview
+              Expanded(flex: sideFlex, child: Column(children: [
+                // Playlist Sidebar with constrained height (Simulated Sync)
+                PlaylistSidebar(isDesktop: true, seasons: _mov.seasons, currentSeason: _sea, currentEpisode: _ep, onSeasonChanged: (s) => setState(() => _sea = s), onEpisodeTap: (e) => setState(() => _ep = e), isLoadingMore: false, onLoadMore: (){}), 
+                const SizedBox(height: 24), 
+                // Overview aligned under Playlist (Symmetry with Info)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(8)),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Text("Overview", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                    const SizedBox(height: 8),
+                    _over()
+                  ])
+                )
+              ]))
+            ]),
+          ),
+          _recs()
+        ],
+      ),
+    );
+  }
+
+  Widget _info(bool mob) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_mov.title, style: mob ? AppStyles.headlineMedium : AppStyles.headlineLarge), const SizedBox(height: 12), Row(children: [const Icon(Icons.star, color: Colors.amber, size: 18), const Text(" 9.8", style: TextStyle(color: Colors.greenAccent))]), const SizedBox(height: 20), SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [ActionIconButton(icon: Icons.add, label: "List", onTap: (){}), const SizedBox(width: 16), ActionIconButton(icon: Icons.share, label: "Share", onTap: _shareContent), const SizedBox(width: 16), ActionIconButton(icon: Icons.flag, label: "Report", onTap: _reportIssue), const SizedBox(width: 16), ActionIconButton(icon: Icons.alarm, label: "Remind", onTap: _remindMe)]))]);
+  Widget _over() => Text(_mov.overview, style: const TextStyle(color: Colors.white70));
+  Widget _recs() => LazyHorizontalSection(title: "Recommendations", initialMovies: List.generate(5, (i) => MovieSnippet(id: "$i", imageUrl: "https://via.placeholder.com/150x220", title: "Movie $i")), onLoadMore: () async => []);
+}
