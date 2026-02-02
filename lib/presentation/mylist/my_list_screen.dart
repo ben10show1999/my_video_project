@@ -1,6 +1,0 @@
-import 'package:flutter/material.dart';
-import '../../core/components/universal_image.dart';
-import '../../core/theme/app_colors.dart';
-import '../../data/mock_data.dart';
-import '../details/movie_details_screen.dart';
-class MyListScreen extends StatelessWidget { const MyListScreen({super.key}); @override Widget build(BuildContext context) { final l = MockData.allMovies.take(6).toList(); return Scaffold(backgroundColor: AppColors.background, appBar: AppBar(title: const Text("My List")), body: Padding(padding: const EdgeInsets.all(16), child: LayoutBuilder(builder: (c, cs) { int cnt = (cs.maxWidth / 140).floor().clamp(3, 8); return GridView.builder(gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: cnt, childAspectRatio: 0.55, crossAxisSpacing: 16, mainAxisSpacing: 16), itemCount: l.length, itemBuilder: (c, i) => InkWell(onTap: () => Navigator.push(c, MaterialPageRoute(builder: (_) => MovieDetailsScreen(movie: l[i]))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [ClipRRect(borderRadius: BorderRadius.circular(8), child: UniversalImage(path: l[i].posterPath)), const SizedBox(height: 8), Text(l[i].title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 13))]))); }))); } }
