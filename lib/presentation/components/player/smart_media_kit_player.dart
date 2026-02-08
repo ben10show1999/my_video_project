@@ -45,19 +45,17 @@ class _SmartMediaKitPlayerState extends State<SmartMediaKitPlayer> {
   bool _isAutoMode = true; 
   double _currentRatio = 16/9;
 
-  // Task 37: Keyboard Focus Node
   final FocusNode _focusNode = FocusNode();
 
   @override void initState() {
     super.initState();
-    // bufferSize handles the aggressive caching intent without crashing
     player = Player(configuration: const PlayerConfiguration(bufferSize: 32 * 1024 * 1024));
 
     controller = VideoController(player);
     
     WidgetsBinding.instance.addPostFrameCallback((_) { 
       _initializeSmartStream();
-      _focusNode.requestFocus(); // Auto focus for keyboard
+      _focusNode.requestFocus(); 
     });
     
     Connectivity().onConnectivityChanged.listen((result) { if (_isError && !result.contains(ConnectivityResult.none)) _retryPlayback(); });
@@ -188,7 +186,6 @@ class _SmartMediaKitPlayerState extends State<SmartMediaKitPlayer> {
   void _triggerIntervalAd() { if (!mounted) return; player.pause(); setState(() => _isIntervalAd = true); }
   void _closeAd() { if (mounted) { setState(() { _isAd = false; _isIntervalAd = false; }); player.play(); } }
   
-  // Task 37: Keyboard Actions
   void _seekRelative(Duration d) {
     final pos = player.state.position;
     final dur = player.state.duration;
@@ -209,7 +206,6 @@ class _SmartMediaKitPlayerState extends State<SmartMediaKitPlayer> {
   @override Widget build(BuildContext context) { 
     final p = Provider.of<AppProvider>(context); 
     
-    // Task 37: Keyboard Listener
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.space): () => player.playOrPause(),
@@ -229,7 +225,7 @@ class _SmartMediaKitPlayerState extends State<SmartMediaKitPlayer> {
           cursor: _showControls ? SystemMouseCursors.basic : SystemMouseCursors.none,
           child: GestureDetector(
             onTap: () {
-                _focusNode.requestFocus(); // Ensure focus on tap
+                _focusNode.requestFocus(); 
                 setState(() => _showControls = !_showControls);
                 if (_showControls) _resetHideTimer();
             },
@@ -292,7 +288,7 @@ class _SmartMediaKitPlayerState extends State<SmartMediaKitPlayer> {
           builder: (c, s) => IconButton(icon: Icon(s.data == true ? Icons.pause : Icons.play_arrow, color: Colors.white), onPressed: player.playOrPause)
         ),
         IconButton(icon: Icon(_loop ? Icons.repeat_one : Icons.repeat, color: _loop ? Colors.amber : Colors.white), onPressed: () => setState(() { _loop = !_loop; player.setPlaylistMode(_loop ? PlaylistMode.single : PlaylistMode.none); })), 
-        IconButton(icon: Icon(_muted ? Icons.volume_off : Icons.volume_up, color: Colors.white), onPressed: _toggleMute), // Added Mute Icon
+        IconButton(icon: Icon(_muted ? Icons.volume_off : Icons.volume_up, color: Colors.white), onPressed: _toggleMute), 
         const Spacer(), 
         IconButton(icon: Icon(_isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen, color: Colors.white), onPressed: _toggleFullscreen), 
         const SizedBox(width: 8), 
