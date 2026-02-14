@@ -1,0 +1,41 @@
+name: my_video_project
+description: A clean, high-performance responsive video app.
+publish_to: 'none'
+version: 1.0.0+1
+environment:
+  sdk: '>=3.11.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  
+  # Core
+  provider: ^6.1.1
+  shared_preferences: ^2.2.2
+  connectivity_plus: ^7.0.0
+  http: ^1.2.0
+  
+  # UI/Media
+  cupertino_icons: ^1.0.6
+  google_fonts: ^8.0.1
+  cached_network_image: ^3.3.1
+  url_launcher: ^6.2.5
+  
+  # Video Player
+  media_kit: ^1.1.10
+  media_kit_video: ^2.0.1
+  
+  # Web Support (Wasm Compatible)
+  web: ^1.1.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
