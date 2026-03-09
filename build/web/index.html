@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="/">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <title>Video Project</title>
+  <style>
+    /* ANTI-PIRACY SHIELD */
+    body { background-color: #000000; margin: 0; padding: 0; overflow: hidden; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
+    #loader-msg { position: fixed; bottom: 8vh; left: 50%; transform: translateX(-50%); width: fit-content; max-width: 80vw; background-color: rgba(20, 20, 20, 0.95); color: #ffffff; padding: 12px 24px; border-radius: 50px; font-family: sans-serif; font-size: 14px; font-weight: 500; border: 1px solid rgba(255, 255, 255, 0.15); transition: opacity 0.5s ease; z-index: 9999; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #splash-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9998; display: flex; align-items: center; justify-content: center; background-color: #000000; transition: opacity 0.5s ease; }
+  </style>
+</head>
+<body oncontextmenu="return false;" ondragstart="return false;">
+  <div id="splash-overlay">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="90vh">
+      <circle r="15" fill="none" stroke="#ffffff" stroke-width="12" stroke-dasharray="70 95">
+        <animateTransform attributeName="transform" type="rotate" values="0 0 0; 360 0 0" dur="2s" repeatCount="indefinite" />
+      </circle>
+    </svg>
+  </div>
+  <div id="loader-msg">جار تحميل التطبيق</div>
+  
+  <script>
+    document.addEventListener('contextmenu', event => event.preventDefault());
+    document.addEventListener('dragstart', event => event.preventDefault());
+
+    // ✅ Task 5: PURE PROXY KILL FOR MEDIA SESSION (Zero Sync Damage)
+    if ('mediaSession' in navigator) {
+      const noop = function() {};
+      const fakeSession = { playbackState: 'none', setActionHandler: noop, setPositionState: noop };
+      Object.defineProperty(fakeSession, 'metadata', { get: function() { return null; }, set: function(val) {} });
+      Object.defineProperty(navigator, 'mediaSession', { get: function() { return fakeSession; }, set: function(val) {} });
+    }
+    
+    // ✅ Task 7: Register Service Worker for Ghost Proxy Streaming
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(err => console.error("SW Reg Failed:", err));
+    }
+
+    const msgDiv = document.getElementById('loader-msg');
+    const splashDiv = document.getElementById('splash-overlay');
+    let appReady = false;
+    setTimeout(() => { if (!appReady) msgDiv.innerText = "أن الأنترنت لديك سيء"; }, 7000);
+    setTimeout(() => { if (!appReady) msgDiv.innerText = "جار تحميل التطبيق"; }, 10000);
+    window.addEventListener('flutter-first-frame', function() { 
+      appReady = true; 
+      msgDiv.style.opacity = '0'; splashDiv.style.opacity = '0';
+      setTimeout(() => { msgDiv.remove(); splashDiv.remove(); }, 500);
+    });
+  </script>
+  
+  <script src="audio_bridge.js"></script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
