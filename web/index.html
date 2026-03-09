@@ -6,7 +6,6 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <title>Video Project</title>
   <style>
-    /* ANTI-PIRACY SHIELD */
     body { background-color: #000000; margin: 0; padding: 0; overflow: hidden; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
     #loader-msg { position: fixed; bottom: 8vh; left: 50%; transform: translateX(-50%); width: fit-content; max-width: 80vw; background-color: rgba(20, 20, 20, 0.95); color: #ffffff; padding: 12px 24px; border-radius: 50px; font-family: sans-serif; font-size: 14px; font-weight: 500; border: 1px solid rgba(255, 255, 255, 0.15); transition: opacity 0.5s ease; z-index: 9999; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     #splash-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9998; display: flex; align-items: center; justify-content: center; background-color: #000000; transition: opacity 0.5s ease; }
@@ -26,7 +25,6 @@
     document.addEventListener('contextmenu', event => event.preventDefault());
     document.addEventListener('dragstart', event => event.preventDefault());
 
-    // ✅ Task 5: PURE PROXY KILL FOR MEDIA SESSION (Zero Sync Damage)
     if ('mediaSession' in navigator) {
       const noop = function() {};
       const fakeSession = { playbackState: 'none', setActionHandler: noop, setPositionState: noop };
@@ -34,8 +32,19 @@
       Object.defineProperty(navigator, 'mediaSession', { get: function() { return fakeSession; }, set: function(val) {} });
     }
     
-    // ✅ Task 7: Register Service Worker for Ghost Proxy Streaming
+    // 🛑 THE RADICAL FIX: Block Flutter's Infinite Reload Loop
     if ('serviceWorker' in navigator) {
+      const originalAddEventListener = navigator.serviceWorker.addEventListener;
+      navigator.serviceWorker.addEventListener = function(type, listener, options) {
+        // When Flutter tries to listen for SW changes to reload the page, we kill the connection!
+        if (type === 'controllerchange') {
+          console.warn("[DRM Shield] Blocked Flutter's aggressive auto-reload loop.");
+          return; 
+        }
+        return originalAddEventListener.call(this, type, listener, options);
+      };
+      
+      // Now we can safely register our Zero-RAM Streaming Proxy without crashing Flutter
       navigator.serviceWorker.register('sw.js').catch(err => console.error("SW Reg Failed:", err));
     }
 
