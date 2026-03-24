@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="/">
+  <meta charset="UTF-8">
+  <title>Video Project Full Apex</title>
+  <style> body { background-color: #000; margin: 0; padding: 0; overflow: hidden; user-select: none; } </style>
+</head>
+<body oncontextmenu="return false;" ondragstart="return false;">
+  <script>
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+    if ('mediaSession' in navigator) {
+      const noop = function() {}; const fakeSession = { playbackState: 'none', setActionHandler: noop, setPositionState: noop };
+      Object.defineProperty(fakeSession, 'metadata', { get: function() { return null; }, set: function(val) {} });
+      Object.defineProperty(navigator, 'mediaSession', { get: function() { return fakeSession; }, set: function(val) {} });
+    }
+    let audioCtx = null;
+    window.addEventListener('start_audio_extraction', (e) => {
+      try {
+        if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+        document.querySelectorAll('video').forEach(v => { if(!v.dataset.aiLinked) { v.dataset.aiLinked = 'true'; } });
+      } catch(e) {}
+    });
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
