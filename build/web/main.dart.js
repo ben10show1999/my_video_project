@@ -22974,7 +22974,7 @@ s=p}for(;;)switch(s){case 0:if($.aZ9){q=!0
 s=1
 break}p=4
 s=7
-return A.p(A.b22(A.fc("https://gist.githubusercontent.com/username/gist_id/raw/config.json",0,null)).yA(B.iF),$async$aqP)
+return A.p(A.b22(A.fc("https://gist.githubusercontent.com/ben10show1999/db8d13db302f99095ed022da4cdfac47/raw/config.json",0,null)).yA(B.iF),$async$aqP)
 case 7:n=b
 if(n.b===200){k=n
 m=B.cs.Le(A.b1V(A.b0G(k.e)).fm(k.w),null)
