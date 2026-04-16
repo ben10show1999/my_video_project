@@ -11,12 +11,11 @@ import 'package:my_video_project/core/services/remote_config_service.dart';
 import 'package:my_video_project/presentation/components/buttons/action_icon_button.dart';
 import 'package:my_video_project/presentation/components/player/smart_media_kit_player.dart';
 import 'package:my_video_project/presentation/details/components/playlist_sidebar.dart';
-import 'lazy_horizontal_section.dart';
+import 'package:my_video_project/presentation/details/components/lazy_horizontal_section.dart';
 
 class MovieDetailsScreen extends StatefulWidget { final MovieModel movie; const MovieDetailsScreen({super.key, required this.movie}); @override State<MovieDetailsScreen> createState() => _MovieDetailsScreenState(); }
 class _MovieDetailsScreenState extends State<MovieDetailsScreen> { 
   late ScrollController _sc; late SeasonModel _sea; late EpisodeModel _ep; double _currentAspectRatio = 16/9; 
-  
   bool _isFullscreen = false;
 
   @override void initState() { super.initState(); _sc = ScrollController(); _sea = widget.movie.seasons.isNotEmpty ? widget.movie.seasons.first : SeasonModel(id: '0', title: 'No Seasons', episodes: []); _ep = _sea.episodes.isNotEmpty ? _sea.episodes.first : EpisodeModel(id: '0', title: 'No Episode', duration: '', seasonNumber: 0, episodeNumber: 0, sources: []); } 
@@ -35,8 +34,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
 
   Widget _buildPlayerInstance() {
     return SmartMediaKitPlayer(
-      // ✅ الحل الجذري (Task 16): استخدام ValueKey يضمن تدمير المشغل القديم كلياً وبناء واحد جديد نظيف عند تغيير الحلقة
-      key: ValueKey("${widget.movie.id}_${_ep.id}"), 
+      key: ValueKey(_ep.id), // Task 17: Deterministic State reset
       sources: _ep.sources, 
       videoTitle: "${widget.movie.title} - ${_ep.title}",
       videoId: "${widget.movie.id}_${_ep.id}", 
