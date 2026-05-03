@@ -1,0 +1,128 @@
+import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
+import 'package:my_video_project/core/theme/app_colors.dart';
+import 'package:my_video_project/core/theme/app_styles.dart';
+import 'package:my_video_project/core/logic/app_provider.dart';
+import 'package:my_video_project/core/utils/thumbnail_cache.dart';
+import 'package:my_video_project/core/components/expandable_text.dart';
+import 'package:my_video_project/data/models/movie_models.dart';
+import 'package:my_video_project/core/components/universal_image.dart';
+import 'package:my_video_project/core/services/remote_config_service.dart';
+import 'package:my_video_project/presentation/components/buttons/action_icon_button.dart';
+import 'package:my_video_project/presentation/components/player/smart_media_kit_player.dart';
+import 'package:my_video_project/presentation/details/components/playlist_sidebar.dart';
+import 'package:my_video_project/presentation/details/components/lazy_horizontal_section.dart';
+
+class MovieDetailsScreen extends StatefulWidget { final MovieModel movie; const MovieDetailsScreen({super.key, required this.movie}); @override State<MovieDetailsScreen> createState() => _MovieDetailsScreenState(); }
+class _MovieDetailsScreenState extends State<MovieDetailsScreen> { 
+  late ScrollController _sc; late SeasonModel _sea; late EpisodeModel _ep; 
+  double _currentAspectRatio = 16/9; 
+  bool _isFullscreen = false;
+
+  @override void initState() { 
+    super.initState(); 
+    _sc = ScrollController(); 
+    _sea = widget.movie.seasons.isNotEmpty ? widget.movie.seasons.first : SeasonModel(id: '0', title: 'No Seasons', episodes: []); 
+    _ep = _sea.episodes.isNotEmpty ? _sea.episodes.first : EpisodeModel(id: '0', title: 'No Episode', duration: '', seasonNumber: 0, episodeNumber: 0, sources: [], subtitles: {}); 
+  } 
+  
+  @override void dispose() { ThumbnailCache.abortAll(); _sc.dispose(); super.dispose(); }
+
+  void _updateLayoutForVideo(double ratio) { 
+    if (mounted && (_currentAspectRatio - ratio).abs() > 0.01) { 
+       setState(() => _currentAspectRatio = ratio); 
+    } 
+  }
+  
+  void _showInfoDialog(BuildContext context, String note) { 
+    showDialog(context: context, builder: (c) => AlertDialog(backgroundColor: const Color(0xFF202020), title: const Center(child: Text("ملاحظة المحتوى", style: TextStyle(color: Colors.white))), content: Text(note, style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center), actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('إغلاق'))])); 
+  }
+
+  Future<void> _handleReport(AppProvider p) async { final Uri emailLaunchUri = Uri(scheme: 'mailto', path: 'support@example.com', queryParameters: {'subject': '${p.tr('report_subject')} ${widget.movie.title} (ID: ${widget.movie.id})'}); if (await canLaunchUrl(emailLaunchUri)) { await launchUrl(emailLaunchUri); } }
+  void _handleRemind(BuildContext context, AppProvider p) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(p.tr('reminder_set')), backgroundColor: AppColors.success)); }
+  void _handleList(BuildContext context, AppProvider p) { p.toggleMyList(widget.movie.id); final msg = p.isInList(widget.movie.id) ? p.tr('added_list') : p.tr('removed_list'); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: AppColors.primary)); }
+
+  String? get _resolvedAdScript => widget.movie.adScript ?? RemoteConfigService.globalAdScript;
+
+  Widget _buildPlayerInstance() {
+    return SmartMediaKitPlayer(
+      key: ValueKey(_ep.id), 
+      sources: _ep.sources, videoTitle: "${widget.movie.title} - ${_ep.title}", videoId: "${widget.movie.id}_${_ep.id}", totalDuration: const Duration(minutes: 45), thumbnailUrl: _ep.thumbnailUrl ?? widget.movie.posterPath, 
+      onAspectRatioChanged: _updateLayoutForVideo, 
+      isFullscreen: _isFullscreen, onFullscreenToggle: () => setState(() => _isFullscreen = !_isFullscreen),
+      subtitles: _ep.subtitles, 
+      adScript: _resolvedAdScript,
+    );
+  }
+
+  @override Widget build(BuildContext context) { 
+    final p = Provider.of<AppProvider>(context); 
+    return Scaffold(
+      backgroundColor: AppColors.background, 
+      appBar: _isFullscreen ? null : AppBar(
+        title: Text(p.tr('watch')), centerTitle: true, backgroundColor: Colors.transparent, elevation: 0, leading: const BackButton(color: Colors.white), 
+        actions: [
+          if (widget.movie.infoNote != null && widget.movie.infoNote!.isNotEmpty)
+            IconButton(
+              icon: widget.movie.infoIconUrl != null ? UniversalImage(path: widget.movie.infoIconUrl!, width: 24) : const Icon(Icons.info_outline, color: Colors.white),
+              onPressed: () => _showInfoDialog(context, widget.movie.infoNote!),
+            ), 
+          const SizedBox(width: 8)
+        ]
+      ), 
+      body: Stack(
+        children: [
+          LayoutBuilder(builder: (c, cs) => cs.maxWidth > 900 ? _desk(p) : _mob(p)),
+          if (_isFullscreen) Positioned.fill(child: Container(color: Colors.black, child: Center(child: AspectRatio(aspectRatio: _currentAspectRatio, child: _buildPlayerInstance())))),
+        ],
+      )
+    ); 
+  }
+  
+  Widget _mob(AppProvider p) => SingleChildScrollView(controller: _sc, child: Column(children: [
+    if (_isFullscreen) AnimatedContainer(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut, child: AspectRatio(aspectRatio: _currentAspectRatio, child: Container(color: Colors.black))) 
+    else AnimatedContainer(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut, child: AspectRatio(aspectRatio: _currentAspectRatio, child: _buildPlayerInstance())), 
+    
+    Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [_info(true, p), const SizedBox(height: 24), _over(), const Divider(color: Colors.white10, height: 48), if(widget.movie.seasons.isNotEmpty) Text(p.tr('episodes'), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)), if(widget.movie.seasons.isNotEmpty) const SizedBox(height: 12), if(widget.movie.seasons.isNotEmpty) SizedBox(height: 400, child: PlaylistSidebar(seasons: widget.movie.seasons, currentSeason: _sea, currentEpisode: _ep, adScript: _resolvedAdScript, onSeasonChanged: (s) => setState(() => _sea = s), onEpisodeTap: (e) => setState(() => _ep = e), isLoadingMore: false, onLoadMore: (){})), const SizedBox(height: 32), _recs(p)]))]));
+  
+  Widget _desk(AppProvider p) { 
+    return LayoutBuilder(builder: (context, constraints) { 
+      int playerFlex = (_currentAspectRatio * 100).toInt().clamp(50, 200); 
+      int listFlex = (200 - playerFlex).clamp(50, 150); 
+      
+      return SingleChildScrollView(child: Padding(padding: const EdgeInsets.all(24), child: Column(children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(flex: playerFlex, child: Column(children: [
+            AnimatedContainer(duration: const Duration(milliseconds: 400), curve: Curves.fastOutSlowIn, child: AspectRatio(aspectRatio: _currentAspectRatio, child: _isFullscreen ? Container(color: Colors.black) : _buildPlayerInstance())), 
+            const SizedBox(height: 20), _info(false, p)
+          ])), 
+          const SizedBox(width: 24), 
+          if(widget.movie.seasons.isNotEmpty) Expanded(flex: listFlex, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            LayoutBuilder(builder: (c, sideConstraints) {
+              double dynamicHeight = (constraints.maxWidth - 48 - 24) * (playerFlex / (playerFlex + listFlex)) / _currentAspectRatio;
+              return AnimatedContainer(duration: const Duration(milliseconds: 400), curve: Curves.fastOutSlowIn, height: dynamicHeight.clamp(300.0, 800.0), child: PlaylistSidebar(isDesktop: true, seasons: widget.movie.seasons, currentSeason: _sea, currentEpisode: _ep, adScript: _resolvedAdScript, onSeasonChanged: (s) => setState(() => _sea = s), onEpisodeTap: (e) => setState(() => _ep = e), isLoadingMore: false, onLoadMore: (){}));
+            }),
+            const SizedBox(height: 20), Text(p.tr('overview'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), const SizedBox(height: 8), _over()
+          ]))
+        ]), 
+        const SizedBox(height: 40), _recs(p)
+      ]))); 
+    }); 
+  }
+  
+  Widget _info(bool mob, AppProvider p) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    Text(widget.movie.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: mob ? AppStyles.headlineMedium : AppStyles.headlineLarge), 
+    const SizedBox(height: 12), 
+    Row(children: [
+      if (widget.movie.rating != null && widget.movie.rating!.isNotEmpty) ...[const Icon(Icons.star, color: Colors.amber, size: 18), Text(" ${widget.movie.rating}", style: const TextStyle(color: Colors.greenAccent)), const SizedBox(width: 12)],
+      if (widget.movie.releaseYear != null && widget.movie.releaseYear!.isNotEmpty) ...[Text(widget.movie.releaseYear!, style: const TextStyle(color: Colors.white70)), const SizedBox(width: 12)],
+      if (widget.movie.ageRating != null && widget.movie.ageRating!.isNotEmpty) Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: AppColors.badgeBg, borderRadius: BorderRadius.circular(4)), child: Text(widget.movie.ageRating!, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)))
+    ]), 
+    const SizedBox(height: 20), 
+    SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [ActionIconButton(icon: p.isInList(widget.movie.id) ? Icons.check : Icons.add, label: "List", isActive: p.isInList(widget.movie.id), onTap: () => _handleList(context, p)), const SizedBox(width: 16), ActionIconButton(icon: Icons.share, label: "Share", onTap: (){}), const SizedBox(width: 16), ActionIconButton(icon: Icons.flag, label: "Report", onTap: () => _handleReport(p)), const SizedBox(width: 16), ActionIconButton(icon: Icons.alarm, label: "Remind", onTap: () => _handleRemind(context, p))]))
+  ]);
+  
+  Widget _over() => ExpandableText(text: widget.movie.overview);
+  Widget _recs(AppProvider p) => LazyHorizontalSection(title: p.tr('recommendations'), showTitles: true, initialMovies: RemoteConfigService.homeSections.isNotEmpty ? RemoteConfigService.homeSections.first.items : [], onLoadMore: () async => []);
+}
