@@ -4,16 +4,17 @@ import 'package:http/http.dart' as http;
 import 'package:my_video_project/data/models/movie_models.dart';
 
 class RemoteConfigService {
-  static const String _gistUrl = "https://gist.githubusercontent.com/username/gist_id/raw/config.json"; 
-  
-  static String? appLogoUrl; 
-  static String? globalAdScript; 
+  static const String _gistUrl =
+      "https://gist.githubusercontent.com/ben10show1999/db8d13db302f99095ed022da4cdfac47/raw/config.json";
+
+  static String? appLogoUrl;
+  static String? globalAdScript;
   static HeroDataModel? heroData;
   static List<SectionModel> homeSections = [];
   static Map<String, MovieModel> moviesDb = {};
   static List<MovieSnippet> searchSuggestions = [];
-  static List<MovieSnippet> allSnippets = []; 
-  
+  static List<MovieSnippet> allSnippets = [];
+
   // Task 41: Array to hold fetched cloud notifications
   static List<AppNotification> cloudNotifications = [];
 
@@ -21,14 +22,24 @@ class RemoteConfigService {
   static bool get isLoaded => _isLoaded;
 
   static String _decrypt(String input) {
-    try { if (input.startsWith('ENC:')) { return utf8.decode(base64Decode(input.substring(4))); } return input; } catch (_) { return input; }
+    try {
+      if (input.startsWith('ENC:')) {
+        return utf8.decode(base64Decode(input.substring(4)));
+      }
+      return input;
+    } catch (_) {
+      return input;
+    }
   }
 
   static Future<bool> fetchConfig() async {
     try {
       // Task 43 & 44: CORS-Safe Cache Busting (Timestamp appending)
-      final String safeUrl = "$_gistUrl?t=${DateTime.now().millisecondsSinceEpoch}";
-      final response = await http.get(Uri.parse(safeUrl)).timeout(const Duration(seconds: 10));
+      final String safeUrl =
+          "$_gistUrl?t=${DateTime.now().millisecondsSinceEpoch}";
+      final response = await http
+          .get(Uri.parse(safeUrl))
+          .timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         _parseData(data);
@@ -38,45 +49,58 @@ class RemoteConfigService {
       return false;
     } catch (e) {
       debugPrint("Remote Config Fetch Error: $e");
-      return false; 
+      return false;
     }
   }
 
   static void _parseData(Map<String, dynamic> data) {
-    if (data['appConfig'] != null) { 
-      appLogoUrl = data['appConfig']['logoUrl']; 
-      globalAdScript = data['appConfig']['globalAdScript']; 
+    if (data['appConfig'] != null) {
+      appLogoUrl = data['appConfig']['logoUrl'];
+      globalAdScript = data['appConfig']['globalAdScript'];
     }
-    if (data['hero'] != null) { heroData = HeroDataModel.fromJson(data['hero']); }
-    if (data['sections'] != null) { homeSections = (data['sections'] as List).map((e) => SectionModel.fromJson(e)).toList(); }
-    if (data['searchSuggestions'] != null) { searchSuggestions = (data['searchSuggestions'] as List).map((e) => MovieSnippet.fromJson(e)).toList(); }
-    
+    if (data['hero'] != null) {
+      heroData = HeroDataModel.fromJson(data['hero']);
+    }
+    if (data['sections'] != null) {
+      homeSections = (data['sections'] as List)
+          .map((e) => SectionModel.fromJson(e))
+          .toList();
+    }
+    if (data['searchSuggestions'] != null) {
+      searchSuggestions = (data['searchSuggestions'] as List)
+          .map((e) => MovieSnippet.fromJson(e))
+          .toList();
+    }
+
     // Task 41: Parse Notifications
     cloudNotifications.clear();
     if (data['notifications'] != null) {
-      cloudNotifications = (data['notifications'] as List).map((e) => AppNotification.fromJson(e)).toList();
+      cloudNotifications = (data['notifications'] as List)
+          .map((e) => AppNotification.fromJson(e))
+          .toList();
     }
-    
+
     moviesDb.clear();
     allSnippets.clear();
     if (data['movies_db'] != null) {
       final db = data['movies_db'] as Map<String, dynamic>;
       db.forEach((key, value) {
         moviesDb[key] = MovieModel.fromJson(value);
-        allSnippets.add(MovieSnippet(id: key, imageUrl: value['posterPath'], title: value['title']));
+        allSnippets.add(MovieSnippet(
+            id: key, imageUrl: value['posterPath'], title: value['title']));
       });
     }
-    
+
     for (var m in moviesDb.values) {
-       for (var s in m.seasons) {
-         for (var e in s.episodes) {
-           for (var q in e.sources) {
-             for(int i = 0; i < q.urls.length; i++) {
-                q.urls[i] = _decrypt(q.urls[i]);
-             }
-           }
-         }
-       }
+      for (var s in m.seasons) {
+        for (var e in s.episodes) {
+          for (var q in e.sources) {
+            for (int i = 0; i < q.urls.length; i++) {
+              q.urls[i] = _decrypt(q.urls[i]);
+            }
+          }
+        }
+      }
     }
   }
 }
