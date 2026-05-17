@@ -1,0 +1,106 @@
+name: OS-Level Push Engine V12
+
+on:
+  push:
+    paths:
+      - 'config.json'
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  send_fcm_notification:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code Base
+        uses: actions/checkout@v4
+
+      - name: Inject Node.js Environment 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Build Google Authentication Library
+        run: npm install google-auth-library
+
+      - name: Execution Smart Payload Routing Engine
+        env:
+          SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          node -e "
+          const fs = require('fs');
+          const https = require('https');
+          const { GoogleAuth } = require('google-auth-library');
+
+          async function sendPush() {
+            try {
+              const config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
+              if (!config.notifications || config.notifications.length === 0) return;
+              
+              const latestNotif = config.notifications[0];
+              const testToken = config.testWebToken;
+              
+              // التوجيه المعماري الذكي: الاستهداف الفردي المباشر للويب (القنص) في حال توفر الرمز، أو البث الجماعي للتطبيقات المدمجة
+              const target = (testToken && testToken.length > 10) ? { token: testToken } : { topic: 'all_users' };
+              
+              console.log('🎯 Smart Routing Target Set To:', target);
+              console.log('✉️ Launching Notification Title:', latestNotif.title);
+
+              const credentials = JSON.parse(process.env.SERVICE_ACCOUNT_JSON);
+              const auth = new GoogleAuth({
+                credentials,
+                scopes: ['https://www.googleapis.com/auth/firebase.messaging']
+              });
+              
+              const client = await auth.getClient();
+              const tokenResponse = await client.getAccessToken();
+              const accessToken = tokenResponse.token;
+              const projectId = credentials.project_id;
+
+              const payload = JSON.stringify({
+                message: {
+                  ...target,
+                  notification: {
+                    title: latestNotif.title,
+                    body: latestNotif.body,
+                    image: latestNotif.imageUrl
+                  },
+                  data: {
+                    targetId: latestNotif.targetId || '',
+                    payload: latestNotif.payload || '',
+                    click_action: 'FLUTTER_NOTIFICATION_CLICK'
+                  },
+                  webpush: {
+                    fcm_options: { link: 'https://ben10show1999.github.io/club_1/' }
+                  }
+                }
+              });
+
+              const options = {
+                hostname: 'fcm.googleapis.com',
+                path: '/v1/projects/' + projectId + '/messages:send',
+                method: 'POST',
+                headers: {
+                  'Authorization': 'Bearer ' + accessToken,
+                  'Content-Type': 'application/json',
+                  'Content-Length': Buffer.byteLength(payload)
+                }
+              };
+
+              const req = https.request(options, (res) => {
+                let data = '';
+                res.on('data', (chunk) => data += chunk);
+                res.on('end', () => console.log('✅ FCM Engine Cloud Response:', data));
+              });
+
+              req.on('error', (e) => console.error('❌ FCM Engine Cloud Terminal Error:', e));
+              req.write(payload);
+              req.end();
+
+            } catch (error) {
+              console.error('Fatal Pipeline Breakdown:', error);
+              process.exit(1);
+            }
+          }
+          sendPush();
+          "
