@@ -37,27 +37,25 @@ void main() async {
     );
     
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-    await FirebaseMessaging.instance.requestPermission();
     
-    // 💡 مُهمة (4): استخراج وطباعة الرمز التعريفي للمتصفح (Device Token Printing Engine)
-    String? myWebToken = await FirebaseMessaging.instance.getToken(vapidKey: "BPvG4GZiDGMHneEmaOgYXY7zRgFMPIwOJw4wuHs_IDjfXlD_cMcw-GftysTarsXk8mrUm5egqvSVpgQBKr1JSXk");
-    debugPrint("=============================================================");
-    debugPrint("🎯 [SNIPER ENGINE ACTIVATED] MY WEB DEVICE TOKEN IS:");
-    debugPrint("$myWebToken");
-    debugPrint("=============================================================");
+    // 💡 حماية جراحية (Try-Catch) لمنع التطبيق من التحطم في بيئات التطوير المغلقة (IDX Sandbox)
+    try {
+      await FirebaseMessaging.instance.requestPermission();
+      String? myWebToken = await FirebaseMessaging.instance.getToken(vapidKey: "BPvG4GZiDGMHneEmaOgYXY7zRgFMPIwOJw4wuHs_IDjfXlD_cMcw-GftysTarsXk8mrUm5egqvSVpgQBKr1JSXk");
+      RemoteConfigService.sniperWebToken = myWebToken; // حفظ الرمز للواجهة
+    } catch (e) {
+      debugPrint("⚠️ Permission blocked by Browser Sandbox: $e");
+    }
 
     if (!kIsWeb) {
       const AndroidInitializationSettings initAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
       const InitializationSettings initSettings = InitializationSettings(android: initAndroid);
-      
-      // 💡 مُهمة (5) لسجل 15 مايو: التعديل الجراحي لحل الأخطاء الأربعة باستخدام Named Arguments
       await _fln.initialize(settings: initSettings);
     }
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) async { 
       await RemoteConfigService.fetchConfig(forceRefresh: true); 
       if (!kIsWeb && message.notification != null) {
-        // 💡 تحويل معاملات show بالكامل لتعمل كمعاملات مسماة توافقاً مع الحزم الحديثة
         _fln.show(
           id: message.notification.hashCode,
           title: message.notification!.title,

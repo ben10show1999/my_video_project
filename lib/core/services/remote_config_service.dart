@@ -11,6 +11,9 @@ class RemoteConfigService {
   static List<MovieSnippet> searchSuggestions = []; static List<MovieSnippet> allSnippets = []; 
   static List<AppNotification> remoteNotifications = [];
 
+  // 🎯 المتغير الجديد لتخزين رمز القناص وعرضه في الشاشة
+  static String? sniperWebToken;
+
   static bool _isLoaded = false;
   static bool get isLoaded => _isLoaded;
 
