@@ -15,9 +15,11 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   console.log('[ServiceWorker] Background Push Core Received: ', payload);
   const notificationTitle = payload.notification?.title || 'إشعار نظام جديد';
+  
+  // 💡 التعديل الجراحي: استخدام رابط صورة حي لمنع الـ (Silent Abort)
   const notificationOptions = {
-    body: payload.notification?.body || 'انقر لفتح المنصة والمعاينة الفورية لفيديو البث المباشر',
-    icon: '/icons/Icon-192.png',
+    body: payload.notification?.body || 'انقر لفتح المنصة',
+    icon: payload.notification?.image || 'https://iili.io/q2Ty8N4.webp',
     data: {
       url: self.location.origin
     }

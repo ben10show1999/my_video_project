@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:web/web.dart' as web;
 import 'package:my_video_project/core/logic/app_provider.dart';
 import 'package:my_video_project/core/services/remote_config_service.dart';
 import 'package:my_video_project/presentation/main_screen.dart' deferred as app_shell;
@@ -38,11 +39,10 @@ void main() async {
     
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
     
-    // 💡 حماية جراحية (Try-Catch) لمنع التطبيق من التحطم في بيئات التطوير المغلقة (IDX Sandbox)
     try {
       await FirebaseMessaging.instance.requestPermission();
       String? myWebToken = await FirebaseMessaging.instance.getToken(vapidKey: "BPvG4GZiDGMHneEmaOgYXY7zRgFMPIwOJw4wuHs_IDjfXlD_cMcw-GftysTarsXk8mrUm5egqvSVpgQBKr1JSXk");
-      RemoteConfigService.sniperWebToken = myWebToken; // حفظ الرمز للواجهة
+      RemoteConfigService.sniperWebToken = myWebToken; 
     } catch (e) {
       debugPrint("⚠️ Permission blocked by Browser Sandbox: $e");
     }
@@ -55,20 +55,34 @@ void main() async {
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) async { 
       await RemoteConfigService.fetchConfig(forceRefresh: true); 
-      if (!kIsWeb && message.notification != null) {
-        _fln.show(
-          id: message.notification.hashCode,
-          title: message.notification!.title,
-          body: message.notification!.body,
-          notificationDetails: const NotificationDetails(
-            android: AndroidNotificationDetails(
-              'channel_id', 
-              'In-App Notifications', 
-              importance: Importance.max, 
-              priority: Priority.high
+      
+      if (message.notification != null) {
+        if (!kIsWeb) {
+          // عرض الإشعار في تطبيقات الموبايل
+          _fln.show(
+            id: message.notification.hashCode,
+            title: message.notification!.title,
+            body: message.notification!.body,
+            notificationDetails: const NotificationDetails(
+              android: AndroidNotificationDetails('channel_id', 'In-App', importance: Importance.max, priority: Priority.high)
             )
-          )
-        );
+          );
+        } else {
+          // 💡 التعديل الجراحي: عرض إشعار نظام التشغيل (OS-Level) أثناء فتح متصفح الويب
+          try {
+            if (web.Notification.permission == 'granted') {
+              web.Notification(
+                message.notification!.title ?? 'إشعار جديد',
+                web.NotificationOptions(
+                  body: message.notification!.body ?? '',
+                  icon: message.notification!.android?.imageUrl ?? 'https://iili.io/q2Ty8N4.webp'
+                )
+              );
+            }
+          } catch (e) {
+            debugPrint('Web OS Notification Engine Error: $e');
+          }
+        }
       }
     });
 
