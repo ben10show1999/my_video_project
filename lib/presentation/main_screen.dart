@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -17,15 +18,33 @@ class _MainScreenState extends State<MainScreen> {
   @override void initState() { 
     super.initState(); 
     _homeFuture = home_tab.loadLibrary(); _searchFuture = search_tab.loadLibrary(); _listFuture = list_tab.loadLibrary(); _settingsFuture = settings_tab.loadLibrary(); 
-    _setupPushRouting(); // 🎯 تفعيل نظام التوجيه الذكي
+    
+    // جدولة الفحص لمنع أي تعارض مع دورة حياة البناء التلقائي للواجهات
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _processWebUrlRouting(); // 🎯 1. فحص توجيه الرابط السائل (للويب)
+      _setupNativePushRouting(); // 📱 2. فحص توجيه التطبيقات المدمجة والـ Streams
+    });
+  }
+
+  // 🎯 الرادار الأمامي للويب: قراءة المعرف المحقون في الرابط فوراً وبدون أي نسبة خطأ
+  void _processWebUrlRouting() async {
+    if (kIsWeb) {
+      final uri = Uri.base;
+      if (uri.queryParameters.containsKey('targetId')) {
+        final targetId = uri.queryParameters['targetId'];
+        if (targetId != null && RemoteConfigService.moviesDb.containsKey(targetId)) {
+          await details_page.loadLibrary();
+          if (mounted) {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => details_page.MovieDetailsScreen(movie: RemoteConfigService.moviesDb[targetId]!)));
+          }
+        }
+      }
+    }
   }
   
-  // نظام صيد الإشعارات وتوجيه المستخدم لصفحة المشاهدة
-  void _setupPushRouting() {
-    // 1. في حال كان التطبيق مغلقاً تماماً وقام المستخدم بالنقر على الإشعار
+  // دورتي صيد الإشعارات القياسية للهواتف أو للمتصفح النشط
+  void _setupNativePushRouting() {
     FirebaseMessaging.instance.getInitialMessage().then(_handlePushClick);
-    
-    // 2. في حال كان التطبيق في الخلفية (Background) وتم النقر على الإشعار
     FirebaseMessaging.onMessageOpenedApp.listen(_handlePushClick);
   }
 
