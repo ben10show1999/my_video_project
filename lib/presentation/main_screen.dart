@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -13,24 +15,29 @@ import 'package:my_video_project/presentation/details/movie_details_screen.dart'
 class MainScreen extends StatefulWidget { const MainScreen({super.key}); @override State<MainScreen> createState() => _MainScreenState(); }
 class _MainScreenState extends State<MainScreen> {
   late Future<void> _homeFuture; late Future<void> _searchFuture; late Future<void> _listFuture; late Future<void> _settingsFuture;
+  Timer? _bootRouterTimer;
   
   @override void initState() { 
     super.initState(); 
     _homeFuture = home_tab.loadLibrary(); _searchFuture = search_tab.loadLibrary(); _listFuture = list_tab.loadLibrary(); _settingsFuture = settings_tab.loadLibrary(); 
     
-    // جدولة الإطلاق بعد انتهاء بناء الشجرة الهيكلية للواجهة بالكامل لمنع التعارض مع المفسر الدخيل
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _executePendingVaultRouting(); // 🎯 تفعيل تفريغ الخزنة الاستاتيكية الآمنة للويب
-      _setupNativePushRouting();     // 📱 تفعيل صائد الإشعارات للتطبيقات المدمجة والخلفية النشطة
+    _setupNativePushRouting();
+    
+    // 🎯 آلية المراقبة المستمرة: فحص جاهزية قاعدة بيانات GitHub بشكل دوري لضمان نجاح القنص والتوجيه
+    _bootRouterTimer = Timer.periodic(const Duration(milliseconds: 200), (timer) {
+      if (RemoteConfigService.isLoaded && RemoteConfigService.moviesDb.isNotEmpty) {
+        _executePendingVaultRouting();
+        timer.cancel(); // إيقاف الفحص فور تفريغ الخزنة بنجاح
+      }
     });
   }
 
-  // تفريغ الخزنة الاستاتيكية والتوجيه الفوري لصفحة المشاهدة دون الاعتماد على متقلبات روابط المتصفح
+  // تفريغ الخزنة الاستاتيكية والتوجيه الفوري لصفحة المشاهدة
   void _executePendingVaultRouting() async {
     final String? targetId = RemoteConfigService.pendingTargetId;
     if (targetId != null && targetId.isNotEmpty) {
-      RemoteConfigService.pendingTargetId = null; // تفريغ فوري للخزنة لمنع التكرار عند الـ Hot Reload
       if (RemoteConfigService.moviesDb.containsKey(targetId)) {
+        RemoteConfigService.pendingTargetId = null; // تفريغ الخزنة لمنع التكرار
         await details_page.loadLibrary();
         if (mounted) {
           Navigator.push(context, MaterialPageRoute(builder: (_) => details_page.MovieDetailsScreen(movie: RemoteConfigService.moviesDb[targetId]!)));
@@ -54,6 +61,11 @@ class _MainScreenState extends State<MainScreen> {
         }
       }
     }
+  }
+
+  @override void dispose() {
+    _bootRouterTimer?.cancel();
+    super.dispose();
   }
 
   Widget _buildDeferredTab(int index) { switch (index) { case 0: return FutureBuilder(future: _homeFuture, builder: (c, s) => s.connectionState == ConnectionState.done ? home_tab.HomeScreen() : const Center(child: CircularProgressIndicator(color: AppColors.primary))); case 1: return FutureBuilder(future: _searchFuture, builder: (c, s) => s.connectionState == ConnectionState.done ? search_tab.SearchScreen() : const Center(child: CircularProgressIndicator(color: AppColors.primary))); case 2: return FutureBuilder(future: _listFuture, builder: (c, s) => s.connectionState == ConnectionState.done ? list_tab.MyListScreen() : const Center(child: CircularProgressIndicator(color: AppColors.primary))); case 3: return FutureBuilder(future: _settingsFuture, builder: (c, s) => s.connectionState == ConnectionState.done ? settings_tab.SettingsScreen() : const Center(child: CircularProgressIndicator(color: AppColors.primary))); default: return const SizedBox.shrink(); } }

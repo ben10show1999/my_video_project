@@ -12,7 +12,7 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// صائد نقرات المتصفح السيادي: استخراج المعرف بدقة من كافة هياكل حزم لوحة التحكم وحقنها في رابط الويب
+// صائد نقرات المتصفح المتقدم: قنص المعرف من كافة ثنايا كتل حزم بيانات FCM Console الأصلية وحقنها بذكاء
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   
@@ -23,19 +23,27 @@ self.addEventListener('notificationclick', function(event) {
         targetId = event.notification.data.targetId;
       } else if (event.notification.data.FCM_MSG && event.notification.data.FCM_MSG.data) {
         targetId = event.notification.data.FCM_MSG.data.targetId || '';
+      } else {
+        // فحص مجهري لكافة الحقول المباشرة داخل الهيكل لمنع أي تغيير في واجهة كونسول فيسبوك/جوجل
+        for (let key in event.notification.data) {
+          if (key.toLowerCase() === 'targetid') {
+            targetId = event.notification.data[key];
+            break;
+          }
+        }
       }
     }
   } catch (e) {
-    console.error('Error extracting data payload from click event:', e);
+    console.error('Critical Error parsing payload structured data:', e);
   }
 
-  // بناء الرابط المباشر مشحوناً بالمعرف لدعم طبقة الالتقاط المبكر جداً في النواة
+  // بناء المسار المباشر المدمج ليتوافق مع آلية القنص المبكر للنواة وفلاتر ويب
   const baseOrigin = self.location.origin + self.location.pathname;
   const targetUrl = targetId ? baseOrigin + '?targetId=' + targetId : baseOrigin;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(windowClients) {
-      // إذا كان هناك تبويب مفتوح مسبقاً، اجبره على الانتقال للرابط المشحون بالمعرف الجديد والتركيز عليه
+      // في حال كان هناك تبويب نشط للموقع، أعد توجيهه للرابط المشحون بالمعرف واجلب التركيز عليه
       for (var i = 0; i < windowClients.length; i++) {
         var client = windowClients[i];
         if (client.url.indexOf(self.location.origin) !== -1 && 'navigate' in client) {
@@ -44,7 +52,7 @@ self.addEventListener('notificationclick', function(event) {
           });
         }
       }
-      // إذا كان مغلقاً تماماً، افتح نافذة جديدة نقية محقونة بالمعرف مباشرة
+      // إذا كان التطبيق مغلقاً تماماً، افتح نافذة جديدة نقية محقونة بالمعرف السائل مباشرة
       if (clients.openWindow) {
         return clients.openWindow(targetUrl);
       }
