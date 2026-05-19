@@ -24,6 +24,34 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized(); 
   MediaKit.ensureInitialized(); 
 
+  // 🎯 القنص المعماري الفائق: التقاط المعرف عبر 3 طبقات فحص قبل إقلاع المحرك ومسح الرابط
+  if (kIsWeb) {
+    try {
+      String? extractedId = Uri.base.queryParameters['targetId'];
+      
+      if (extractedId == null) {
+        final String fullHref = web.window.location.href;
+        final Uri parsedUri = Uri.parse(fullHref);
+        if (parsedUri.queryParameters.containsKey('targetId')) {
+          extractedId = parsedUri.queryParameters['targetId'];
+        } else {
+          final String fragment = parsedUri.fragment;
+          if (fragment.contains('targetId=')) {
+            final RegExp match = RegExp(r'targetId=([^&]+)');
+            extractedId = match.firstMatch(fragment)?.group(1);
+          }
+        }
+      }
+      
+      if (extractedId != null && extractedId.isNotEmpty) {
+        RemoteConfigService.pendingTargetId = extractedId;
+        debugPrint('🎯 Ultra Early Snatcher Captured Target ID: $extractedId');
+      }
+    } catch (e) {
+      debugPrint('Early Snatcher Exception Blocked: $e');
+    }
+  }
+
   try {
     await Firebase.initializeApp(
       options: const FirebaseOptions(
@@ -39,11 +67,10 @@ void main() async {
     
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
     
-    // 💡 حماية جراحية (Try-Catch) لمنع التطبيق من التحطم في بيئات التطوير المغلقة (IDX Sandbox)
     try {
       await FirebaseMessaging.instance.requestPermission();
       String? myWebToken = await FirebaseMessaging.instance.getToken(vapidKey: "BPvG4GZiDGMHneEmaOgYXY7zRgFMPIwOJw4wuHs_IDjfXlD_cMcw-GftysTarsXk8mrUm5egqvSVpgQBKr1JSXk");
-      RemoteConfigService.sniperWebToken = myWebToken; // حفظ رمز الرادار للواجهة الإعدادات
+      RemoteConfigService.sniperWebToken = myWebToken; 
     } catch (e) {
       debugPrint("⚠️ Permission blocked by Browser Sandbox: $e");
     }
@@ -68,7 +95,6 @@ void main() async {
             )
           );
         } else {
-          // 💡 إشعار الواجهة الأمامية للويب (OS-Level Foreground): عرض الإشعار المنبثق للمتصفح لحظة وصوله
           try {
             if (web.Notification.permission == 'granted') {
               web.Notification(

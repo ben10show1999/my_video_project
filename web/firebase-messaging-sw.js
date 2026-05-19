@@ -12,26 +12,30 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// 🎯 صائد نقرات المتصفح السيادي: استخراج البيانات وحقنها مباشرة في رابط الويب لمنع الضياع والتكرار
+// صائد نقرات المتصفح السيادي: استخراج المعرف بدقة من كافة هياكل حزم لوحة التحكم وحقنها في رابط الويب
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   
   let targetId = '';
   try {
-    // التقاط المعرف من هيكل بيانات FCM المتقدمة المرسلة من لوحة التحكم
-    if (event.notification.data && event.notification.data.FCM_MSG && event.notification.data.FCM_MSG.data) {
-      targetId = event.notification.data.FCM_MSG.data.targetId || '';
+    if (event.notification.data) {
+      if (event.notification.data.targetId) {
+        targetId = event.notification.data.targetId;
+      } else if (event.notification.data.FCM_MSG && event.notification.data.FCM_MSG.data) {
+        targetId = event.notification.data.FCM_MSG.data.targetId || '';
+      }
     }
   } catch (e) {
-    console.error('Error parsing FCM payload data:', e);
+    console.error('Error extracting data payload from click event:', e);
   }
 
-  // بناء الرابط السائل الجديد مشحوناً بمعرف الفيلم المستهدف
-  const targetUrl = targetId ? self.location.origin + '/?targetId=' + targetId : self.location.origin + '/';
+  // بناء الرابط المباشر مشحوناً بالمعرف لدعم طبقة الالتقاط المبكر جداً في النواة
+  const baseOrigin = self.location.origin + self.location.pathname;
+  const targetUrl = targetId ? baseOrigin + '?targetId=' + targetId : baseOrigin;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(windowClients) {
-      // إذا كان الموقع مفتوحاً مسبقاً في أي تبويب، اجبره على الانتقال للرابط الجديد والتركيز عليه
+      // إذا كان هناك تبويب مفتوح مسبقاً، اجبره على الانتقال للرابط المشحون بالمعرف الجديد والتركيز عليه
       for (var i = 0; i < windowClients.length; i++) {
         var client = windowClients[i];
         if (client.url.indexOf(self.location.origin) !== -1 && 'navigate' in client) {
@@ -40,7 +44,7 @@ self.addEventListener('notificationclick', function(event) {
           });
         }
       }
-      // إذا كان الموقع مغلقاً، افتح نافذة جديدة بالرابط المشحون بالبيانات مباشرة
+      // إذا كان مغلقاً تماماً، افتح نافذة جديدة نقية محقونة بالمعرف مباشرة
       if (clients.openWindow) {
         return clients.openWindow(targetUrl);
       }

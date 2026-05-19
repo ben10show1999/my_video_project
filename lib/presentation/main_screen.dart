@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -19,30 +18,27 @@ class _MainScreenState extends State<MainScreen> {
     super.initState(); 
     _homeFuture = home_tab.loadLibrary(); _searchFuture = search_tab.loadLibrary(); _listFuture = list_tab.loadLibrary(); _settingsFuture = settings_tab.loadLibrary(); 
     
-    // جدولة الفحص لمنع أي تعارض مع دورة حياة البناء التلقائي للواجهات
+    // جدولة الإطلاق بعد انتهاء بناء الشجرة الهيكلية للواجهة بالكامل لمنع التعارض مع المفسر الدخيل
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _processWebUrlRouting(); // 🎯 1. فحص توجيه الرابط السائل (للويب)
-      _setupNativePushRouting(); // 📱 2. فحص توجيه التطبيقات المدمجة والـ Streams
+      _executePendingVaultRouting(); // 🎯 تفعيل تفريغ الخزنة الاستاتيكية الآمنة للويب
+      _setupNativePushRouting();     // 📱 تفعيل صائد الإشعارات للتطبيقات المدمجة والخلفية النشطة
     });
   }
 
-  // 🎯 الرادار الأمامي للويب: قراءة المعرف المحقون في الرابط فوراً وبدون أي نسبة خطأ
-  void _processWebUrlRouting() async {
-    if (kIsWeb) {
-      final uri = Uri.base;
-      if (uri.queryParameters.containsKey('targetId')) {
-        final targetId = uri.queryParameters['targetId'];
-        if (targetId != null && RemoteConfigService.moviesDb.containsKey(targetId)) {
-          await details_page.loadLibrary();
-          if (mounted) {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => details_page.MovieDetailsScreen(movie: RemoteConfigService.moviesDb[targetId]!)));
-          }
+  // تفريغ الخزنة الاستاتيكية والتوجيه الفوري لصفحة المشاهدة دون الاعتماد على متقلبات روابط المتصفح
+  void _executePendingVaultRouting() async {
+    final String? targetId = RemoteConfigService.pendingTargetId;
+    if (targetId != null && targetId.isNotEmpty) {
+      RemoteConfigService.pendingTargetId = null; // تفريغ فوري للخزنة لمنع التكرار عند الـ Hot Reload
+      if (RemoteConfigService.moviesDb.containsKey(targetId)) {
+        await details_page.loadLibrary();
+        if (mounted) {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => details_page.MovieDetailsScreen(movie: RemoteConfigService.moviesDb[targetId]!)));
         }
       }
     }
   }
   
-  // دورتي صيد الإشعارات القياسية للهواتف أو للمتصفح النشط
   void _setupNativePushRouting() {
     FirebaseMessaging.instance.getInitialMessage().then(_handlePushClick);
     FirebaseMessaging.onMessageOpenedApp.listen(_handlePushClick);
