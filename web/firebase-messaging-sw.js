@@ -12,7 +12,6 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// صائد نقرات المتصفح المتقدم: قنص المعرف من كافة ثنايا كتل حزم بيانات FCM Console الأصلية وحقنها بذكاء
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   
@@ -24,7 +23,6 @@ self.addEventListener('notificationclick', function(event) {
       } else if (event.notification.data.FCM_MSG && event.notification.data.FCM_MSG.data) {
         targetId = event.notification.data.FCM_MSG.data.targetId || '';
       } else {
-        // فحص مجهري لكافة الحقول المباشرة داخل الهيكل لمنع أي تغيير في واجهة كونسول فيسبوك/جوجل
         for (let key in event.notification.data) {
           if (key.toLowerCase() === 'targetid') {
             targetId = event.notification.data[key];
@@ -34,25 +32,23 @@ self.addEventListener('notificationclick', function(event) {
       }
     }
   } catch (e) {
-    console.error('Critical Error parsing payload structured data:', e);
+    console.error('Payload parsing error:', e);
   }
 
-  // بناء المسار المباشر المدمج ليتوافق مع آلية القنص المبكر للنواة وفلاتر ويب
-  const baseOrigin = self.location.origin + self.location.pathname;
-  const targetUrl = targetId ? baseOrigin + '?targetId=' + targetId : baseOrigin;
+  // 🎯 التعديل الجذري: استخدام scope بدلاً من pathname لضمان فتح الجذر الرئيسي للموقع
+  const baseUrl = self.registration.scope;
+  const targetUrl = targetId ? baseUrl + '?targetId=' + targetId : baseUrl;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(windowClients) {
-      // في حال كان هناك تبويب نشط للموقع، أعد توجيهه للرابط المشحون بالمعرف واجلب التركيز عليه
       for (var i = 0; i < windowClients.length; i++) {
         var client = windowClients[i];
-        if (client.url.indexOf(self.location.origin) !== -1 && 'navigate' in client) {
+        if (client.url.indexOf(baseUrl) !== -1 && 'navigate' in client) {
           return client.navigate(targetUrl).then(function(c) {
             return c.focus();
           });
         }
       }
-      // إذا كان التطبيق مغلقاً تماماً، افتح نافذة جديدة نقية محقونة بالمعرف السائل مباشرة
       if (clients.openWindow) {
         return clients.openWindow(targetUrl);
       }
