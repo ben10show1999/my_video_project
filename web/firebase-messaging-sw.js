@@ -35,8 +35,11 @@ self.addEventListener('notificationclick', function(event) {
     console.error('Payload parsing error:', e);
   }
 
-  // 🎯 التعديل الجذري: استخدام scope بدلاً من pathname لضمان فتح الجذر الرئيسي للموقع
-  const baseUrl = self.registration.scope;
+  // استخدام المسار الأصلي النقي فقط
+  let baseUrl = self.registration.scope;
+  if (!baseUrl.endsWith('/')) {
+    baseUrl += '/';
+  }
   const targetUrl = targetId ? baseUrl + '?targetId=' + targetId : baseUrl;
 
   event.waitUntil(
