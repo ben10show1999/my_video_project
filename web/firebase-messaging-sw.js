@@ -1,3 +1,38 @@
+// 🎯 1. الاختطاف السيادي: يجب أن يكون هذا الكود في السطر الأول قبل استدعاء مكاتب Firebase
+self.addEventListener('notificationclick', function(event) {
+  event.stopImmediatePropagation(); // 🛑 إيقاف محرك Firebase الافتراضي الغبي من فتح التطبيق من البداية!
+  event.notification.close();
+  
+  let targetId = '';
+  try {
+    if (event.notification.data && event.notification.data.FCM_MSG && event.notification.data.FCM_MSG.data) {
+      targetId = event.notification.data.FCM_MSG.data.targetId || '';
+    }
+  } catch (e) {
+    console.error('Payload parse error:', e);
+  }
+
+  // بناء الرابط المحقون بالبيانات
+  let baseUrl = self.registration.scope;
+  if (!baseUrl.endsWith('/')) { baseUrl += '/'; }
+  const targetUrl = targetId ? baseUrl + '?targetId=' + targetId : baseUrl;
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(windowClients) {
+      for (var i = 0; i < windowClients.length; i++) {
+        var client = windowClients[i];
+        if (client.url.indexOf(baseUrl) !== -1 && 'navigate' in client) {
+          return client.navigate(targetUrl).then(c => c.focus());
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
+  );
+});
+
+// 2. تحميل مكاتب Firebase بعد أن ضمنا السيطرة المطلقة على النقرات
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
@@ -11,50 +46,3 @@ firebase.initializeApp({
 });
 
 const messaging = firebase.messaging();
-
-self.addEventListener('notificationclick', function(event) {
-  event.notification.close();
-  
-  let targetId = '';
-  try {
-    if (event.notification.data) {
-      if (event.notification.data.targetId) {
-        targetId = event.notification.data.targetId;
-      } else if (event.notification.data.FCM_MSG && event.notification.data.FCM_MSG.data) {
-        targetId = event.notification.data.FCM_MSG.data.targetId || '';
-      } else {
-        for (let key in event.notification.data) {
-          if (key.toLowerCase() === 'targetid') {
-            targetId = event.notification.data[key];
-            break;
-          }
-        }
-      }
-    }
-  } catch (e) {
-    console.error('Payload parsing error:', e);
-  }
-
-  // استخدام المسار الأصلي النقي فقط
-  let baseUrl = self.registration.scope;
-  if (!baseUrl.endsWith('/')) {
-    baseUrl += '/';
-  }
-  const targetUrl = targetId ? baseUrl + '?targetId=' + targetId : baseUrl;
-
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(windowClients) {
-      for (var i = 0; i < windowClients.length; i++) {
-        var client = windowClients[i];
-        if (client.url.indexOf(baseUrl) !== -1 && 'navigate' in client) {
-          return client.navigate(targetUrl).then(function(c) {
-            return c.focus();
-          });
-        }
-      }
-      if (clients.openWindow) {
-        return clients.openWindow(targetUrl);
-      }
-    })
-  );
-});
