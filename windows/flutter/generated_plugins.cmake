@@ -6,6 +6,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   cloud_firestore
   connectivity_plus
   firebase_core
+  firebase_remote_config
   media_kit_video
   url_launcher_windows
 )
