@@ -18,7 +18,6 @@ class RemoteConfigService {
   static Future<bool> fetchConfig({bool forceRefresh = false}) async {
     if (_isLoaded && !forceRefresh) return true;
     
-    // 1. إعداد مصفوفة الروابط الافتراضية الصلبة كخط دفاع أول داخل الكود مباشرة
     final List<String> localFallbackUrls = [
       "https://raw.githubusercontent.com/ben10show1999/club_1/refs/heads/main/config.json"
     ];
@@ -30,27 +29,23 @@ class RemoteConfigService {
     try {
       final rc = FirebaseRemoteConfig.instance;
       
-      // ضبط المهل الزمنية وفترات التحديث لتكون سريعة جداً على الويب
       await rc.setConfigSettings(RemoteConfigSettings(
-        fetchTimeout: const Duration(seconds: 4), // مهلة قصيرة لحماية التطبيق من التعليق في حال وجود Ad-Blocker
+        fetchTimeout: const Duration(seconds: 4), 
         minimumFetchInterval: const Duration(seconds: 1),
       ));
       
-      // حقن القيم الافتراضية داخل المحرك ليعمل بها فوراً دون انتظار الشبكة
       await rc.setDefaults(<String, dynamic>{
         'webapp_urls': urlsJsonString,
         'app_secret_token': secretToken,
       });
 
-      // محاولة جلب البيانات الحية من السحابة
       try {
         await rc.fetchAndActivate();
         urlsJsonString = rc.getString('webapp_urls');
         secretToken = rc.getString('app_secret_token');
         debugPrint("🚀 Firebase Remote Config synchronized successfully.");
       } catch (firebaseError) {
-        // في حال وجود مانع إعلانات أو فشل شبكة، سيتم قراءة القيم الافتراضية المحلية بصمت
-        debugPrint("⚠️ Firebase fetch blocked or offline (Using Local Defaults): $firebaseError");
+        debugPrint("⚠️ Firebase fetch blocked or offline (Using Local Defaults)");
         urlsJsonString = rc.getString('webapp_urls');
         secretToken = rc.getString('app_secret_token');
       }
@@ -68,19 +63,18 @@ class RemoteConfigService {
         failoverUrls = localFallbackUrls;
       }
 
-      // 2. محرك الفشل التلقائي المتعدد (Multi-URL Failover Engine)
       for (String url in failoverUrls) {
         try {
           final String cacheBuster = DateTime.now().millisecondsSinceEpoch.toString();
           final Uri targetUri = Uri.parse("$url?v=$cacheBuster");
           
-          final response = await http.get(
-            targetUri,
-            headers: {
-              "X-App-Token": secretToken.isNotEmpty ? secretToken : localFallbackToken,
-              "Accept": "application/json"
-            }
-          ).timeout(const Duration(seconds: 6));
+          // 🎯 التوجيه الذكي: عدم إرسال الهيدر السري إذا كان الرابط يخص GitHub لمنع خطأ CORS
+          final Map<String, String> requestHeaders = {"Accept": "application/json"};
+          if (!url.contains("raw.githubusercontent.com")) {
+            requestHeaders["X-App-Token"] = secretToken.isNotEmpty ? secretToken : localFallbackToken;
+          }
+          
+          final response = await http.get(targetUri, headers: requestHeaders).timeout(const Duration(seconds: 6));
           
           if (response.statusCode == 200) {
             final data = jsonDecode(response.body);
@@ -92,12 +86,11 @@ class RemoteConfigService {
             debugPrint("⚠️ Server responded with code ${response.statusCode} for: $url");
           }
         } catch (e) {
-          debugPrint("🚫 Failover engaged: Source unreadable, switching to next inline... $url - Error: $e");
+          debugPrint("🚫 Failover engaged: Source unreadable, switching to next inline... $url");
           continue; 
         }
       }
       
-      // خط الدفاع الأخير المطلق: إذا فشل كل شيء، حاول جلب الرابط الاحتياطي المباشر بدون قيود Remote Config
       if (!_isLoaded) {
         return await _executeAbsoluteFallback(localFallbackUrls.first, localFallbackToken);
       }
@@ -112,7 +105,11 @@ class RemoteConfigService {
   static Future<bool> _executeAbsoluteFallback(String fallbackUrl, String token) async {
     try {
       debugPrint("🛡️ Executing Absolute Emergency Fallback Channel...");
-      final response = await http.get(Uri.parse(fallbackUrl), headers: {"X-App-Token": token}).timeout(const Duration(seconds: 10));
+      final Map<String, String> fallbackHeaders = {"Accept": "application/json"};
+      if (!fallbackUrl.contains("raw.githubusercontent.com")) {
+        fallbackHeaders["X-App-Token"] = token;
+      }
+      final response = await http.get(Uri.parse(fallbackUrl), headers: fallbackHeaders).timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         _parseData(data);
@@ -120,7 +117,7 @@ class RemoteConfigService {
         return true;
       }
     } catch (e) {
-      debugPrint("Ultimate Fallback Channel Failed: $e");
+      debugPrint("Ultimate Fallback Channel Failed.");
     }
     return false;
   }

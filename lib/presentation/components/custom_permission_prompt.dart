@@ -5,21 +5,30 @@ import 'package:web/web.dart' as web;
 
 class CustomPermissionPrompt {
   static Future<void> checkAndShow(BuildContext context) async {
-    if (!kIsWeb) return; // التطبيقات المدمجة لا تعاني من هذه المشكلة، لكن يمكنك إلغاء الشرط إذا أردت توحيد التجربة تماماً
+    if (!kIsWeb) return; 
 
     try {
-      // 1. التحقق مما إذا كنا قد سألنا المستخدم من قبل عبر الذاكرة المحلية
       final hasAsked = web.window.localStorage.getItem('soft_prompt_asked');
       if (hasAsked == 'true') return;
 
-      // 2. التحقق من حالة الصلاحية الفعلية من النظام
-      final settings = await FirebaseMessaging.instance.getNotificationSettings();
-      if (settings.authorizationStatus == AuthorizationStatus.authorized || 
-          settings.authorizationStatus == AuthorizationStatus.denied) {
-        return; // إذا كان قد وافق مسبقاً أو رفض بشكل قاطع من المتصفح، لا نظهر الحاوية
+      // 🎯 الانسحاب الصامت: تجربة قراءة حالة الإشعارات لاختبار دعم المتصفح
+      // إذا انهار محرك Firebase هنا، فهذا يعني أن المتصفح (أو WebView) لا يدعم الإشعارات أصلاً
+      bool isPushSupported = true;
+      try {
+        final settings = await FirebaseMessaging.instance.getNotificationSettings();
+        if (settings.authorizationStatus == AuthorizationStatus.authorized || 
+            settings.authorizationStatus == AuthorizationStatus.denied) {
+          return; 
+        }
+      } catch (_) {
+        isPushSupported = false; // المتصفح مقيد ولا يدعم واجهة Notification API
       }
 
-      // 3. إظهار الحاوية المخصصة الفخمة
+      // إذا كان المتصفح لا يدعم الإشعارات، نتراجع بصمت ولا نظهر الحاوية لتجنب إزعاج المستخدم بلا فائدة
+      if (!isPushSupported) {
+        return;
+      }
+
       if (context.mounted) {
         showDialog(
           context: context,
@@ -28,7 +37,7 @@ class CustomPermissionPrompt {
         );
       }
     } catch (e) {
-      debugPrint('Soft Prompt Check Error: $e');
+      // الالتقاط الأخير لأي خطأ عرضي لمنع ظهوره في الـ Console
     }
   }
 }
@@ -37,26 +46,22 @@ class _CustomPromptDialog extends StatelessWidget {
   const _CustomPromptDialog();
 
   void _onDeny(BuildContext context) {
-    web.window.localStorage.setItem('soft_prompt_asked', 'true');
+    try { web.window.localStorage.setItem('soft_prompt_asked', 'true'); } catch(_) {}
     Navigator.pop(context);
   }
 
   void _onAllow(BuildContext context) async {
-    // حفظ القرار لإيقاف إظهار الحاوية مستقبلاً
-    web.window.localStorage.setItem('soft_prompt_asked', 'true');
+    try { web.window.localStorage.setItem('soft_prompt_asked', 'true'); } catch(_) {}
     Navigator.pop(context);
 
     try {
-      // استدعاء الحاوية الأصلية للنظام بعد تهيئة المستخدم
       final result = await FirebaseMessaging.instance.requestPermission();
-      
       if (result.authorizationStatus == AuthorizationStatus.authorized) {
-        // تهيئة الرمز والاشتراك في الراديو بعد الموافقة الناجحة فقط
         await FirebaseMessaging.instance.getToken(vapidKey: "BPvG4GZiDGMHneEmaOgYXY7zRgFMPIwOJw4wuHs_IDjfXlD_cMcw-GftysTarsXk8mrUm5egqvSVpgQBKr1JSXk");
         await FirebaseMessaging.instance.subscribeToTopic('all_users');
       }
     } catch (e) {
-      debugPrint("Native prompt failed or silently dropped by WebView: $e");
+      // تراجع صامت في حال رفض المتصفح لإظهار الحاوية الأصلية
     }
   }
 
