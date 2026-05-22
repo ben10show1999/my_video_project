@@ -24,7 +24,6 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized(); 
   MediaKit.ensureInitialized(); 
 
-  // 🎯 القنص المعماري الفائق: التقاط المعرف عبر 3 طبقات فحص قبل إقلاع المحرك ومسح الرابط
   if (kIsWeb) {
     try {
       String? extractedId = Uri.base.queryParameters['targetId'];
@@ -69,8 +68,8 @@ void main() async {
     
     try {
       await FirebaseMessaging.instance.requestPermission();
-      String? myWebToken = await FirebaseMessaging.instance.getToken(vapidKey: "BPvG4GZiDGMHneEmaOgYXY7zRgFMPIwOJw4wuHs_IDjfXlD_cMcw-GftysTarsXk8mrUm5egqvSVpgQBKr1JSXk");
-      RemoteConfigService.sniperWebToken = myWebToken; 
+      // يتم استدعاء getToken فقط لتهيئة VAPID Key لمتصفح الويب لضمان اشتراك Topic بشكل صحيح، دون حفظ أو عرض الرمز
+      await FirebaseMessaging.instance.getToken(vapidKey: "BPvG4GZiDGMHneEmaOgYXY7zRgFMPIwOJw4wuHs_IDjfXlD_cMcw-GftysTarsXk8mrUm5egqvSVpgQBKr1JSXk");
     } catch (e) {
       debugPrint("⚠️ Permission blocked by Browser Sandbox: $e");
     }

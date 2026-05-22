@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:my_video_project/core/logic/app_provider.dart';
 import 'package:my_video_project/core/theme/app_colors.dart';
-import 'package:my_video_project/core/services/remote_config_service.dart';
 
 class SettingsScreen extends StatelessWidget { 
   const SettingsScreen({super.key}); 
@@ -15,7 +14,7 @@ class SettingsScreen extends StatelessWidget {
   } 
   
   void _showAboutApp(BuildContext context, AppProvider p) { 
-    showDialog(context: context, builder: (c) => AlertDialog(backgroundColor: const Color(0xFF202020), title: Center(child: Text(p.tr('about_app'), style: const TextStyle(color: Colors.white))), content: Column(mainAxisSize: MainAxisSize.min, children: const [Icon(Icons.play_circle_fill, size: 60, color: AppColors.primary), SizedBox(height: 16), Text("Version 13.0.0", style: TextStyle(color: Colors.white70)), Text("Firestore Master Build", style: TextStyle(color: Colors.grey, fontSize: 12))]), actions: [TextButton(onPressed: () => Navigator.pop(c), child: Text(p.tr('close')))])); 
+    showDialog(context: context, builder: (c) => AlertDialog(backgroundColor: const Color(0xFF202020), title: Center(child: Text(p.tr('about_app'), style: const TextStyle(color: Colors.white))), content: Column(mainAxisSize: MainAxisSize.min, children: const [Icon(Icons.play_circle_fill, size: 60, color: AppColors.primary), SizedBox(height: 16), Text("Version 13.9.1", style: TextStyle(color: Colors.white70)), Text("Pure Serverless Architecture", style: TextStyle(color: Colors.grey, fontSize: 12))]), actions: [TextButton(onPressed: () => Navigator.pop(c), child: Text(p.tr('close')))])); 
   } 
   
   @override Widget build(BuildContext context) { 
@@ -25,29 +24,6 @@ class SettingsScreen extends StatelessWidget {
       appBar: AppBar(title: Text(p.tr('settings')), centerTitle: true, backgroundColor: Colors.transparent, elevation: 0, leading: BackButton(color: Colors.white, onPressed: () { if (p.navIndex != 0) { p.setNavIndex(0); } else { Navigator.pop(context); } })), 
       body: ListView(
         children: [
-          // 🎯 شاشة الرادار: لوحة عرض رمز متصفحك الخاص بالقنص (تظهر فقط إن تم استخراج الرمز بنجاح)
-          if (RemoteConfigService.sniperWebToken != null)
-            Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A1A1A),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 2)
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(children: [Icon(Icons.radar, color: AppColors.primary), SizedBox(width: 8), Text("Device Sniper Token (للنسخ):", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))]),
-                  const SizedBox(height: 12),
-                  SelectableText(
-                    RemoteConfigService.sniperWebToken!, 
-                    style: const TextStyle(color: Colors.amber, fontSize: 11, fontFamily: 'monospace')
-                  ),
-                ]
-              )
-            ),
-            
           const UserAccountsDrawerHeader(decoration: BoxDecoration(color: Color(0xFF202020)), accountName: Text("Flutter Dev"), accountEmail: Text("dev@example.com"), currentAccountPicture: CircleAvatar(backgroundColor: AppColors.primary, child: Icon(Icons.person, color: Colors.black))), 
           SwitchListTile(value: p.isAutoplayEnabled, onChanged: (v) => p.toggleAutoplay(v), title: Text(p.tr('autoplay'), style: const TextStyle(color: Colors.white)), activeTrackColor: AppColors.primary.withValues(alpha: 0.5), activeThumbColor: AppColors.primary), 
           SwitchListTile(value: p.notificationsEnabled, onChanged: (v) => p.toggleNotifications(v), title: Text(p.tr('notifications'), style: const TextStyle(color: Colors.white)), activeTrackColor: AppColors.primary.withValues(alpha: 0.5), activeThumbColor: AppColors.primary), 

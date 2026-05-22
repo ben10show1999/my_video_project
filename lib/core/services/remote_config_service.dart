@@ -10,9 +10,6 @@ class RemoteConfigService {
   static List<SectionModel> homeSections = []; static Map<String, MovieModel> moviesDb = {};
   static List<MovieSnippet> searchSuggestions = []; static List<MovieSnippet> allSnippets = []; 
   
-  static String? sniperWebToken;
-  
-  // 🎯 الخزنة الاستاتيكية لحفظ المعرف المقنص مبكراً أثناء عملية الإقلاع
   static String? pendingTargetId;
 
   static bool _isLoaded = false;
