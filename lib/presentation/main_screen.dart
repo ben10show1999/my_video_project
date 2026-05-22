@@ -7,6 +7,7 @@ import 'package:web/web.dart' as web;
 import 'package:my_video_project/core/logic/app_provider.dart';
 import 'package:my_video_project/core/theme/app_colors.dart';
 import 'package:my_video_project/core/services/remote_config_service.dart';
+import 'package:my_video_project/presentation/components/custom_permission_prompt.dart';
 import 'package:my_video_project/presentation/home/home_screen.dart' deferred as home_tab;
 import 'package:my_video_project/presentation/search/search_screen.dart' deferred as search_tab;
 import 'package:my_video_project/presentation/mylist/my_list_screen.dart' deferred as list_tab;
@@ -24,16 +25,16 @@ class _MainScreenState extends State<MainScreen> {
     
     _setupNativePushRouting();
     
-    // 🎯 استخراج المعرف من جسر LocalStorage الذي صنعه الـ HTML
     if (kIsWeb) {
       try {
         final storedTarget = web.window.localStorage.getItem('pending_fcm_targetId');
         if (storedTarget != null && storedTarget.isNotEmpty) {
           RemoteConfigService.pendingTargetId = storedTarget;
-          web.window.localStorage.removeItem('pending_fcm_targetId'); // تنظيف الذاكرة
+          web.window.localStorage.removeItem('pending_fcm_targetId');
         }
       } catch (e) {
-        debugPrint('LocalStorage Read Error: $e');
+        // 🎯 اللمسة الجراحية: تسجيل الخطأ بهدوء لإسكات المحرك بدلاً من ترك الكتلة فارغة
+        debugPrint('Silent fallback: LocalStorage payload not found or inaccessible - $e');
       }
     }
 
@@ -42,6 +43,12 @@ class _MainScreenState extends State<MainScreen> {
         _executePendingVaultRouting();
         timer.cancel(); 
       }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) CustomPermissionPrompt.checkAndShow(context);
+      });
     });
   }
 

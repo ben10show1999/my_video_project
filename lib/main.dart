@@ -24,6 +24,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized(); 
   MediaKit.ensureInitialized(); 
 
+  // 🎯 القنص المعماري الفائق: التقاط المعرف مبكراً جداً
   if (kIsWeb) {
     try {
       String? extractedId = Uri.base.queryParameters['targetId'];
@@ -44,7 +45,6 @@ void main() async {
       
       if (extractedId != null && extractedId.isNotEmpty) {
         RemoteConfigService.pendingTargetId = extractedId;
-        debugPrint('🎯 Ultra Early Snatcher Captured Target ID: $extractedId');
       }
     } catch (e) {
       debugPrint('Early Snatcher Exception Blocked: $e');
@@ -66,13 +66,8 @@ void main() async {
     
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
     
-    try {
-      await FirebaseMessaging.instance.requestPermission();
-      // يتم استدعاء getToken فقط لتهيئة VAPID Key لمتصفح الويب لضمان اشتراك Topic بشكل صحيح، دون حفظ أو عرض الرمز
-      await FirebaseMessaging.instance.getToken(vapidKey: "BPvG4GZiDGMHneEmaOgYXY7zRgFMPIwOJw4wuHs_IDjfXlD_cMcw-GftysTarsXk8mrUm5egqvSVpgQBKr1JSXk");
-    } catch (e) {
-      debugPrint("⚠️ Permission blocked by Browser Sandbox: $e");
-    }
+    // 🛑 تمت إزالة طلب الإذن العنيف (requestPermission) من هنا بالكامل
+    // لكي لا يتفاجأ المستخدم وتظهر حاوية المتصفح بشكل مزعج ومرفوض
 
     if (!kIsWeb) {
       const AndroidInitializationSettings initAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -111,7 +106,9 @@ void main() async {
       }
     });
 
-    try { await FirebaseMessaging.instance.subscribeToTopic('all_users'); } catch (_) {}
+    if (!kIsWeb) {
+      try { await FirebaseMessaging.instance.subscribeToTopic('all_users'); } catch (_) {}
+    }
   } catch (e) { debugPrint('Firebase Init Failed: $e'); }
 
   await RemoteConfigService.fetchConfig(forceRefresh: true);
