@@ -18,20 +18,42 @@ class RemoteConfigService {
   static Future<bool> fetchConfig({bool forceRefresh = false}) async {
     if (_isLoaded && !forceRefresh) return true;
     
+    // 1. إعداد مصفوفة الروابط الافتراضية الصلبة كخط دفاع أول داخل الكود مباشرة
+    final List<String> localFallbackUrls = [
+      "https://raw.githubusercontent.com/ben10show1999/club_1/refs/heads/main/config.json"
+    ];
+    const String localFallbackToken = "DEFAULT_SECURE_TOKEN_V1";
+
+    String urlsJsonString = '["https://raw.githubusercontent.com/ben10show1999/club_1/refs/heads/main/config.json"]';
+    String secretToken = localFallbackToken;
+
     try {
       final rc = FirebaseRemoteConfig.instance;
       
-      // إعدادات Remote Config: جلب البيانات فوراً في بيئة التطوير، ويمكنك تعديلها لاحقاً
+      // ضبط المهل الزمنية وفترات التحديث لتكون سريعة جداً على الويب
       await rc.setConfigSettings(RemoteConfigSettings(
-        fetchTimeout: const Duration(seconds: 10),
-        minimumFetchInterval: const Duration(seconds: 1), // للحصول على التحديث اللحظي بدون Deploy
+        fetchTimeout: const Duration(seconds: 4), // مهلة قصيرة لحماية التطبيق من التعليق في حال وجود Ad-Blocker
+        minimumFetchInterval: const Duration(seconds: 1),
       ));
       
-      await rc.fetchAndActivate();
+      // حقن القيم الافتراضية داخل المحرك ليعمل بها فوراً دون انتظار الشبكة
+      await rc.setDefaults(<String, dynamic>{
+        'webapp_urls': urlsJsonString,
+        'app_secret_token': secretToken,
+      });
 
-      // 1. استخراج الروابط المغلفة والرمز السري من Firebase Console
-      final String urlsJsonString = rc.getString('webapp_urls');
-      final String secretToken = rc.getString('app_secret_token');
+      // محاولة جلب البيانات الحية من السحابة
+      try {
+        await rc.fetchAndActivate();
+        urlsJsonString = rc.getString('webapp_urls');
+        secretToken = rc.getString('app_secret_token');
+        debugPrint("🚀 Firebase Remote Config synchronized successfully.");
+      } catch (firebaseError) {
+        // في حال وجود مانع إعلانات أو فشل شبكة، سيتم قراءة القيم الافتراضية المحلية بصمت
+        debugPrint("⚠️ Firebase fetch blocked or offline (Using Local Defaults): $firebaseError");
+        urlsJsonString = rc.getString('webapp_urls');
+        secretToken = rc.getString('app_secret_token');
+      }
       
       List<String> failoverUrls = [];
       try {
@@ -39,49 +61,68 @@ class RemoteConfigService {
           failoverUrls = List<String>.from(jsonDecode(urlsJsonString));
         }
       } catch (e) {
-        debugPrint("Error parsing failover URLs from Remote Config: $e");
+        debugPrint("Error parsing URLs string structure: $e");
       }
 
-      // توفير رابط احتياطي صلب (Hardcoded Fallback) في حال فشل الاتصال بـ Firebase
       if (failoverUrls.isEmpty) {
-        failoverUrls = ["https://raw.githubusercontent.com/ben10show1999/club_1/refs/heads/main/config.json"];
+        failoverUrls = localFallbackUrls;
       }
 
-      // 2. محرك Multi-URL Failover: المرور على الروابط واحداً تلو الآخر
+      // 2. محرك الفشل التلقائي المتعدد (Multi-URL Failover Engine)
       for (String url in failoverUrls) {
         try {
           final String cacheBuster = DateTime.now().millisecondsSinceEpoch.toString();
           final Uri targetUri = Uri.parse("$url?v=$cacheBuster");
           
-          // 3. حقن الرمز السري في الهيدر (لن يظهر في الـ URL أبداً)
           final response = await http.get(
             targetUri,
             headers: {
-              "X-App-Token": secretToken.isNotEmpty ? secretToken : "DEFAULT_SECURE_TOKEN_V1",
+              "X-App-Token": secretToken.isNotEmpty ? secretToken : localFallbackToken,
               "Accept": "application/json"
             }
-          ).timeout(const Duration(seconds: 8)); // مهلة قصيرة للانتقال السريع للرابط التالي عند التعطل
+          ).timeout(const Duration(seconds: 6));
           
           if (response.statusCode == 200) {
             final data = jsonDecode(response.body);
             _parseData(data);
             _isLoaded = true;
-            debugPrint("✅ Config loaded successfully from: $url");
-            return true; // نجاح! الخروج من حلقة الـ Failover
+            debugPrint("✅ Content deployed perfectly from: $url");
+            return true; 
           } else {
-            debugPrint("⚠️ URL responded with ${response.statusCode}: $url");
+            debugPrint("⚠️ Server responded with code ${response.statusCode} for: $url");
           }
         } catch (e) {
-          debugPrint("🚫 Failover: URL failed, switching to next... $url");
-          continue; // فشل الاتصال؟ انتقل فوراً للرابط التالي في المصفوفة
+          debugPrint("🚫 Failover engaged: Source unreadable, switching to next inline... $url - Error: $e");
+          continue; 
         }
       }
       
-      return false; // جميع الروابط تعطلت
-    } catch (e) {
-      debugPrint("Remote Config Engine Error: $e");
+      // خط الدفاع الأخير المطلق: إذا فشل كل شيء، حاول جلب الرابط الاحتياطي المباشر بدون قيود Remote Config
+      if (!_isLoaded) {
+        return await _executeAbsoluteFallback(localFallbackUrls.first, localFallbackToken);
+      }
+      
       return false; 
+    } catch (criticalError) {
+      debugPrint("Critical Kernel Exception Blocked: $criticalError");
+      return await _executeAbsoluteFallback(localFallbackUrls.first, localFallbackToken);
     }
+  }
+
+  static Future<bool> _executeAbsoluteFallback(String fallbackUrl, String token) async {
+    try {
+      debugPrint("🛡️ Executing Absolute Emergency Fallback Channel...");
+      final response = await http.get(Uri.parse(fallbackUrl), headers: {"X-App-Token": token}).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        _parseData(data);
+        _isLoaded = true;
+        return true;
+      }
+    } catch (e) {
+      debugPrint("Ultimate Fallback Channel Failed: $e");
+    }
+    return false;
   }
 
   static void _parseData(Map<String, dynamic> data) {
