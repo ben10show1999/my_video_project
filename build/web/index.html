@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html> <head> <base href="/"> <meta charset="UTF-8"> <meta content="IE=Edge" http-equiv="X-UA-Compatible"> <title>Video Project Engine V13</title> 
+
+<script>
+  (function() {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const targetId = urlParams.get('targetId');
+      if (targetId) {
+        window.localStorage.setItem('pending_fcm_targetId', targetId);
+        window.history.replaceState({}, document.title, window.location.pathname); // مسح الرابط ليرضى فلاتر
+      }
+    } catch (e) {}
+  })();
+</script>
