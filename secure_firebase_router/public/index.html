@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>التطبيق الآمن</title>
+  <style>
+    body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #000; }
+    #loader { color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100%; }
+    iframe { width: 100%; height: 100%; border: none; display: none; }
+  </style>
+</head>
+<body>
+  <div id="loader">جاري الاتصال بالسيرفر الآمن...</div>
+  <iframe id="app-frame" allow="fullscreen; autoplay; encrypted-media"></iframe>
+
+  <script type="module">
+    // استخدام أحدث إصدارات Firebase JS SDK v10.x
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getRemoteConfig, fetchAndActivate, getValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-remote-config.js";
+    import { initializeAppCheck, ReCaptchaV3Provider, getToken } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";
+
+    // ⚠️ يجب استبدال هذه القيم ببيانات مشروعك في Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyAHEohG8X7bUK0LWfTmCVFkPT6SjbJGL08",
+      authDomain: "my-video-project-c6696.firebaseapp.com",
+      projectId: "my-video-project-c6696",
+      storageBucket: "my-video-project-c6696.firebasestorage.app",
+      messagingSenderId: "162978515705",
+      appId: "1:162978515705:web:f837eb508d1b341bff3028",
+      measurementId: "G-S4E8PKQLHX"
+    };
+
+    const app = initializeApp(firebaseConfig);
+
+    // 1. تفعيل طبقة الحماية Firebase App Check (reCAPTCHA v3)
+    // ⚠️ استبدل المفتاح بمفتاح reCAPTCHA v3 الخاص بك
+    const appCheck = initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider('6Lc5ckgtAAAAALY5KjOi7JT_3jp32N5i55fBKp6Y'),
+      isTokenAutoRefreshEnabled: true
+    });
+
+    const rc = getRemoteConfig(app);
+    rc.settings.minimumFetchIntervalMillis = 0; // جلب فوري دائماً للراوتر
+
+    async function initializeRouter() {
+      try {
+        await fetchAndActivate(rc);
+        // جلب قائمة الروابط (Netlify وغيرها) من Firebase
+        const nodesString = getValue(rc, "active_nodes").asString();
+        // مصفوفة افتراضية في حال عدم وجود قيم
+        const urls = nodesString ? JSON.parse(nodesString) : ["https://your-fallback.netlify.app"];
+
+        let selectedUrl = urls[0];
+
+        // 2. نظام التوجيه الديناميكي (Multi-URL Failover)
+        for (const url of urls) {
+           try {
+             // فحص سريع (Ping) للتأكد من أن الاستضافة تعمل
+             await fetch(url, { mode: 'no-cors', cache: 'no-store' });
+             selectedUrl = url;
+             break; // تم العثور على سيرفر يعمل
+           } catch (e) {
+             console.warn('استضافة غير متاحة، جاري تجربة التالي:', url);
+           }
+        }
+
+        // 3. توليد رمز التوثيق والحقن
+        const tokenResponse = await getToken(appCheck);
+        const secureToken = tokenResponse.token;
+        const timestamp = Date.now();
+
+        // 4. بناء الرابط النهائي المُشفر وعرض التطبيق
+        // سيقوم تطبيق Flutter لاحقاً بالتقاط t و ts للتحقق
+        const finalUrl = `${selectedUrl}?t=${secureToken}&ts=${timestamp}`;
+        
+        const frame = document.getElementById('app-frame');
+        const loader = document.getElementById('loader');
+        
+        frame.src = finalUrl;
+        frame.onload = () => {
+          loader.style.display = 'none';
+          frame.style.display = 'block';
+        };
+
+      } catch (error) {
+        console.error("خطأ في نظام التوجيه:", error);
+        document.getElementById('loader').innerText = "الخدمة غير متوفرة حالياً.";
+      }
+    }
+
+    initializeRouter();
+  </script>
+</body>
+</html>
