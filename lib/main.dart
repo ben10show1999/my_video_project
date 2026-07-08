@@ -7,10 +7,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:web/web.dart' as web;
 import 'package:my_video_project/core/logic/app_provider.dart';
 import 'package:my_video_project/core/services/remote_config_service.dart';
 import 'package:my_video_project/presentation/main_screen.dart' deferred as app_shell;
+import 'package:web/web.dart' as web;
 
 final FlutterLocalNotificationsPlugin _fln = FlutterLocalNotificationsPlugin();
 
@@ -23,47 +23,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void main() async { 
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 🛡️ Master Security Gate: Zero-Trust Validation
-  try {
-    final search = web.window.location.search;
-    final params = Uri.splitQueryString(search.startsWith('?') ? search.substring(1) : search);
-    final token = params['t'];
-    final timestampStr = params['ts'];
-
-    bool isAuthorized = false;
-    if (token != null && timestampStr != null) {
-      final timestamp = int.tryParse(timestampStr);
-      if (timestamp != null) {
-        final now = DateTime.now().millisecondsSinceEpoch;
-        // صلاحية الرابط: 120 ثانية (2 دقيقة) من لحظة توليده في الراوتر الأمني
-        if (now - timestamp < 120000) {
-          isAuthorized = true;
-        }
-      }
-    }
-
-    if (!isAuthorized) {
-      runApp(const MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: Scaffold(
-          backgroundColor: Colors.black,
-          body: Center(
-            child: Text(
-              'الوصول مرفوض (Access Denied)\nالرابط غير صالح أو منتهي الصلاحية.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.redAccent, fontSize: 18),
-            ),
-          ),
-        ),
-      ));
-      return; // إيقاف تنفيذ باقي التطبيق فوراً
-    }
-  } catch (e) {
-    debugPrint('Security Gate Warning: $e');
-  }
-  // 🛡️ End of Security Gate
-   
-  MediaKit.ensureInitialized(); 
+MediaKit.ensureInitialized(); 
 
   // 🎯 القنص المعماري الفائق: التقاط المعرف مبكراً جداً
   if (kIsWeb) {
