@@ -1,0 +1,15 @@
+[build]
+  # تحميل بيئة Flutter (3.44.4) وبناء المشروع تلقائياً في خوادم Netlify (Zero-CLI)
+  command = "git clone -b 3.44.4 https://github.com/flutter/flutter.git _flutter && ./_flutter/bin/flutter pub get && ./_flutter/bin/flutter build web --release"
+  publish = "build/web"
+
+[[redirects]]
+  # توجيه جميع المسارات إلى index.html لضمان عمل توجيهات Flutter بشكل صحيح (SPA)
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[edge_functions]]
+  # تفعيل دالة الحماية الصارمة على جميع الطلبات الواردة
+  function = "secure_headers"
+  path = "/*"
