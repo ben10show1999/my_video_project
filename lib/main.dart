@@ -23,6 +23,52 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void main() async { 
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 🛡️ Master Security Gate: Zero-Trust Validation
+  try {
+    final hostname = web.window.location.hostname;
+    // استثناء بيئة التطوير (Codespaces/Localhost) لعدم تعطيل عملك البرمجي
+    if (hostname != 'localhost' && hostname != '127.0.0.1') {
+      final search = web.window.location.search;
+      final params = Uri.splitQueryString(search.startsWith('?') ? search.substring(1) : search);
+      final token = params['t'];
+      final timestampStr = params['ts'];
+
+      bool isAuthorized = false;
+      if (token != null && timestampStr != null) {
+        final timestamp = int.tryParse(timestampStr);
+        if (timestamp != null) {
+          final now = DateTime.now().millisecondsSinceEpoch;
+          // صلاحية الرابط: 120 ثانية (2 دقيقة) من لحظة توليده في الراوتر الأمني
+          if (now - timestamp < 120000) {
+            isAuthorized = true;
+          }
+        }
+      }
+
+      if (!isAuthorized) {
+        runApp(const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: Scaffold(
+            backgroundColor: Colors.black,
+            body: Center(
+              child: Text(
+                'الوصول مرفوض (Access Denied)\nالرابط غير صالح أو منتهي الصلاحية.',
+                textAlign: TextAlign.center,
+                textDirection: TextDirection.rtl,
+                style: TextStyle(color: Colors.redAccent, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ));
+        return; // إيقاف تنفيذ التطبيق بالكامل وطرد الزائر
+      }
+    }
+  } catch (e) {
+    debugPrint('Security Gate Warning: $e');
+  }
+  // 🛡️ End of Security Gate
+
+
 MediaKit.ensureInitialized(); 
 
   // 🎯 القنص المعماري الفائق: التقاط المعرف مبكراً جداً
