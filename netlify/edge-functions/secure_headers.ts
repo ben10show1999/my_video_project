@@ -8,7 +8,7 @@ export default async (request: Request, context: any) => {
   response.headers.set("X-Content-Type-Options", "nosniff");
   
   // 🚀 ترويسات ضرورية لتشغيل محرك WebAssembly (Wasm) بأقصى أداء ممكن
-  response.headers.set("Cross-Origin-Opener-Policy", "same-origin");
+  // response.headers.set("Cross-Origin-Opener-Policy", "same-origin"); // تم التعطيل لمنع إعادة التحميل المزدوجة (Double Reload)
   // response.headers.set("Cross-Origin-Embedder-Policy", "credentialless"); // تم تعطيلها لتسريع الوسائط الخارجية
   
   return response;
