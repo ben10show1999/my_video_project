@@ -9,7 +9,7 @@ export default async (request: Request, context: any) => {
   
   // 🚀 ترويسات ضرورية لتشغيل محرك WebAssembly (Wasm) بأقصى أداء ممكن
   response.headers.set("Cross-Origin-Opener-Policy", "same-origin");
-  response.headers.set("Cross-Origin-Embedder-Policy", "credentialless");
+  // response.headers.set("Cross-Origin-Embedder-Policy", "credentialless"); // تم تعطيلها لتسريع الوسائط الخارجية
   
   return response;
 };

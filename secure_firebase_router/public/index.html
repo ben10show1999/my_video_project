@@ -54,14 +54,18 @@
         let selectedUrl = urls[0];
 
         // 2. نظام التوجيه الديناميكي (Multi-URL Failover)
+        // نظام التوجيه الديناميكي السريع (بحد أقصى 2.5 ثانية للرابط)
         for (const url of urls) {
            try {
-             // فحص سريع (Ping) للتأكد من أن الاستضافة تعمل
-             await fetch(url, { mode: 'no-cors', cache: 'no-store' });
+             const controller = new AbortController();
+             const timeoutId = setTimeout(() => controller.abort(), 2500);
+             // يتم إلغاء الطلب فوراً إذا تجاوز 2.5 ثانية لتسريع الانتقال
+             await fetch(url, { mode: 'no-cors', cache: 'no-store', signal: controller.signal });
+             clearTimeout(timeoutId);
              selectedUrl = url;
-             break; // تم العثور على سيرفر يعمل
+             break; 
            } catch (e) {
-             console.warn('استضافة غير متاحة، جاري تجربة التالي:', url);
+             console.warn('السيرفر غير متاح أو بطيء جداً، الانتقال للرابط البديل:', url);
            }
         }
 
