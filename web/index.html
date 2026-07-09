@@ -1,5 +1,21 @@
 <!DOCTYPE html>
 <html> <head>
+  <script>
+    // الإلغاء الصريح لتسجيل Service Worker في إعدادات Flutter الحديثة
+    window.flutterConfiguration = {
+      serviceWorkerVersion: null
+    };
+    
+    // تدمير أي Service Worker عالق في المتصفح من الجلسات السابقة
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+          registration.unregister();
+        }
+      });
+    }
+  </script>
+
   <link rel="preconnect" href="https://your-media-server.com" crossorigin> <script>
     window.__MASTER_AUTH__ = null;
     window.addEventListener('message', function(event) {

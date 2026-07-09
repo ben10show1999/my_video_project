@@ -80,7 +80,8 @@
         const loader = document.getElementById('loader');
         
         // تحميل رابط نظيف تماماً لحفظ الـ Service Worker Cache ومنع الـ Double Reload
-        frame.src = selectedUrl;
+        const finalIframeUrl = selectedUrl.endsWith('/') ? selectedUrl : selectedUrl + '/';
+        frame.src = finalIframeUrl;
         
         frame.onload = () => {
           loader.style.display = 'none';
