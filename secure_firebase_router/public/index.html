@@ -76,15 +76,22 @@
 
         // 4. بناء الرابط النهائي المُشفر وعرض التطبيق
         // سيقوم تطبيق Flutter لاحقاً بالتقاط t و ts للتحقق
-        const finalUrl = `${selectedUrl}?t=${secureToken}&ts=${timestamp}`;
-        
         const frame = document.getElementById('app-frame');
         const loader = document.getElementById('loader');
         
-        frame.src = finalUrl;
+        // تحميل رابط نظيف تماماً لحفظ الـ Service Worker Cache ومنع الـ Double Reload
+        frame.src = selectedUrl;
+        
         frame.onload = () => {
           loader.style.display = 'none';
           frame.style.display = 'block';
+          
+          // تمرير التوكنات الأمنية عبر قناة postMessage الآمنة خلف الكواليس
+          frame.contentWindow.postMessage({
+            type: 'MASTER_AUTH',
+            t: secureToken,
+            ts: timestamp
+          }, selectedUrl);
         };
 
       } catch (error) {

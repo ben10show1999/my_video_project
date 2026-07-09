@@ -797,7 +797,7 @@
       "name": "my_video_project",
       "rootUri": "../",
       "packageUri": "lib/",
-      "languageVersion": "3.2"
+      "languageVersion": "3.12"
     }
   ],
   "generator": "pub",

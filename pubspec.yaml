@@ -3,7 +3,7 @@ description: The Ultimate Absolute Master Build V13 - Firestore Push Engine.
 publish_to: 'none'
 version: 13.0.0+1
 environment:
-  sdk: '>=3.2.0 <4.0.0'
+  sdk: '>=3.12.2 <4.0.0'
 dependencies:
   flutter:
     sdk: flutter

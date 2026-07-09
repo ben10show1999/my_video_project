@@ -1,3 +1,5 @@
+import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -23,25 +25,33 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void main() async { 
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 🛡️ Master Security Gate: Zero-Trust Validation
+  // 🛡️ Master Security Gate: Zero-Trust Validation (PostMessage V2)
   try {
     final hostname = web.window.location.hostname;
-    // استثناء بيئة التطوير (Codespaces/Localhost) لعدم تعطيل عملك البرمجي
     if (hostname != 'localhost' && hostname != '127.0.0.1') {
-      final search = web.window.location.search;
-      final params = Uri.splitQueryString(search.startsWith('?') ? search.substring(1) : search);
-      final token = params['t'];
-      final timestampStr = params['ts'];
-
       bool isAuthorized = false;
-      if (token != null && timestampStr != null) {
-        final timestamp = int.tryParse(timestampStr);
-        if (timestamp != null) {
-          final now = DateTime.now().millisecondsSinceEpoch;
-          // صلاحية الرابط: 120 ثانية (2 دقيقة) من لحظة توليده في الراوتر الأمني
-          if (now - timestamp < 120000) {
+      int attempts = 0;
+
+      // حلقة فحص ذكية (Polling) تعطي مساحة 500 ملي ثانية لالتقاط التوكن غير المتزامن فور وصوله
+      while (attempts < 10) {
+        // استدعاء الدالة بشكل آمن من الـ JS عبر الـ Interop الحديث
+        final JSAny? checkFunc = (web.window as JSObject).getProperty('validateMasterAuth'.toJS);
+        if (checkFunc != null && checkFunc.isA<JSFunction>()) {
+          final JSString result = (checkFunc as JSFunction).callAsFunction() as JSString;
+          final status = result.toDart;
+          
+          if (status == "VALID") {
             isAuthorized = true;
+            break;
+          } else if (status == "MISSING") {
+            await Future.delayed(const Duration(milliseconds: 50));
+            attempts++;
+          } else {
+            break;
           }
+        } else {
+          await Future.delayed(const Duration(milliseconds: 50));
+          attempts++;
         }
       }
 
@@ -52,7 +62,7 @@ void main() async {
             backgroundColor: Colors.black,
             body: Center(
               child: Text(
-                'الوصول مرفوض (Access Denied)\nالرابط غير صالح أو منتهي الصلاحية.',
+                'الوصول مرفوض (Access Denied)\nالرابط غير صالح، افتح التطبيق من المنفذ الرسمي.',
                 textAlign: TextAlign.center,
                 textDirection: TextDirection.rtl,
                 style: TextStyle(color: Colors.redAccent, fontSize: 18, fontWeight: FontWeight.bold),
@@ -60,7 +70,7 @@ void main() async {
             ),
           ),
         ));
-        return; // إيقاف تنفيذ التطبيق بالكامل وطرد الزائر
+        return;
       }
     }
   } catch (e) {

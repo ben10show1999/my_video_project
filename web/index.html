@@ -1,5 +1,28 @@
 <!DOCTYPE html>
 <html> <head>
+  <link rel="preconnect" href="https://your-media-server.com" crossorigin> <script>
+    window.__MASTER_AUTH__ = null;
+    window.addEventListener('message', function(event) {
+      if (event.data && event.data.type === 'MASTER_AUTH') {
+        window.__MASTER_AUTH__ = event.data;
+      }
+    });
+
+    // دالة فحص وتوثيق متوافقة 100% مع محرك الـ Wasm والـ JS
+    window.validateMasterAuth = function() {
+      if (!window.__MASTER_AUTH__) return "MISSING";
+      var t = window.__MASTER_AUTH__.t;
+      var ts = window.__MASTER_AUTH__.ts;
+      if (!t || !ts) return "INVALID";
+      
+      var timestamp = parseInt(ts);
+      var now = Date.now();
+      if (now - timestamp > 120000) return "EXPIRED";
+      
+      return "VALID";
+    };
+  </script>
+
   <link rel="preconnect" href="https://your-media-server.com" crossorigin>
   <link rel="dns-prefetch" href="https://your-media-server.com">
  <base href="$FLUTTER_BASE_HREF"> <meta charset="UTF-8"> <meta content="IE=Edge" http-equiv="X-UA-Compatible"> <title>Video Project Engine V13</title> 
